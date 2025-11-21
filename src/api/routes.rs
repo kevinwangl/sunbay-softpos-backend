@@ -201,8 +201,15 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             api_middleware::rate_limit_middleware,
         ));
 
-    // 根路由
+    // 根路由 - 添加根健康检查端点
     Router::new()
+        .route("/health", get(|| async {
+            use axum::Json;
+            Json(serde_json::json!({
+                "status": "ok",
+                "timestamp": chrono::Utc::now().to_rfc3339()
+            }))
+        }))
         .nest("/api/v1", api_v1)
         .layer(cors)
         .with_state(state)

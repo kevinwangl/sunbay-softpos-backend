@@ -33,11 +33,10 @@ pub struct ListDevicesQuery {
 /// POST /api/v1/devices/register
 pub async fn register_device(
     State(state): State<Arc<AppState>>,
-    Extension(claims): Extension<crate::security::jwt::Claims>,
     Json(req): Json<RegisterDeviceRequest>,
 ) -> Result<impl IntoResponse, AppError> {
-    // 提取操作员ID
-    let operator_id = claims.sub;
+    // 设备注册是公开端点，使用系统用户作为操作员
+    let operator_id = "system";
 
     // 调用服务层
     let response = state
