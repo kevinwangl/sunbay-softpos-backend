@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE sdk_versions\n            SET status = ?,\n                download_url = ?,\n                checksum = ?,\n                file_size = ?,\n                release_notes = ?,\n                min_os_version = ?,\n                target_devices = ?,\n                distribution_strategy = ?,\n                released_at = ?\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 10
+    },
+    "nullable": []
+  },
+  "hash": "1cd0ec51c6fcdc329ba43d9bb6342debfc1226d6e634276faef7f828ece6f56c"
+}

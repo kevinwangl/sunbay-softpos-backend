@@ -1,0 +1,92 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                id, version,\n                update_type as \"update_type: _\",\n                status as \"status: _\",\n                download_url, checksum, file_size, release_notes,\n                min_os_version, target_devices, distribution_strategy,\n                created_at, released_at\n            FROM sdk_versions\n            WHERE status = 'Released'\n            ORDER BY released_at DESC\n            LIMIT 1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "version",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "update_type: _",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "status: _",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "download_url",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "checksum",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "file_size",
+        "ordinal": 6,
+        "type_info": "Int64"
+      },
+      {
+        "name": "release_notes",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "min_os_version",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "target_devices",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "distribution_strategy",
+        "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "released_at",
+        "ordinal": 12,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "40030e5ade0e1f2efba72d9216a35f7979c20aa351d2684dcec86d2a906ff902"
+}

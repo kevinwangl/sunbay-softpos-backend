@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO threat_events (\n                id, device_id, threat_type, severity, status, description,\n                detected_at, resolved_at, resolved_by\n            )\n            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": []
+  },
+  "hash": "254fc78ab72146f9db1b5c42fd9a7572b9d99f52db8d55cd27c180c78c8c563a"
+}

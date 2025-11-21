@@ -1,0 +1,28 @@
+[Unit]
+Description=SUNBAY SoftPOS Backend Service
+After=network.target
+
+[Service]
+Type=simple
+User=sunbay
+Group=sunbay
+WorkingDirectory=/opt/sunbay-softpos
+Environment="RUST_LOG=info"
+Environment="CONFIG_PATH=/etc/sunbay-softpos/config.yaml"
+ExecStart=/opt/sunbay-softpos/sunbay-softpos-backend
+Restart=on-failure
+RestartSec=5s
+
+# 安全设置
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sunbay-softpos /var/log/sunbay-softpos
+
+# 资源限制
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,59 @@
+# Rust代码格式化配置
+
+# 最大行宽
+max_width = 100
+
+# 硬标签宽度
+hard_tabs = false
+tab_spaces = 4
+
+# 导入排序
+reorder_imports = true
+reorder_modules = true
+
+# 函数调用
+fn_call_width = 80
+fn_single_line = false
+
+# 结构体
+struct_lit_width = 80
+struct_lit_single_line = false
+
+# 数组
+array_width = 80
+
+# 链式调用
+chain_width = 80
+
+# 注释
+comment_width = 100
+wrap_comments = true
+normalize_comments = true
+
+# 格式化字符串
+format_strings = true
+
+# 使用字段初始化简写
+use_field_init_shorthand = true
+
+# 使用try操作符
+use_try_shorthand = true
+
+# 空格
+spaces_around_ranges = false
+space_before_colon = false
+space_after_colon = true
+
+# 控制流
+control_brace_style = "AlwaysSameLine"
+
+# 匹配
+match_arm_blocks = true
+match_block_trailing_comma = true
+
+# 导入
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"
+
+# 版本
+edition = "2021"

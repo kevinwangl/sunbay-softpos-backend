@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO sdk_versions (\n                id, version, update_type, status, download_url,\n                checksum, file_size, release_notes, min_os_version,\n                target_devices, distribution_strategy, created_at, released_at\n            )\n            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 13
+    },
+    "nullable": []
+  },
+  "hash": "5dc134a4a9a8081088b821605f9ab4357b3ddc28727b920ad60ce779732d237b"
+}

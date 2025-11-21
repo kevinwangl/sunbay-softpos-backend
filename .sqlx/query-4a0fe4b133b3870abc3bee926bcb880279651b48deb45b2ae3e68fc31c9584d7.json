@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE threat_events\n            SET status = ?, resolved_at = ?, resolved_by = ?\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "4a0fe4b133b3870abc3bee926bcb880279651b48deb45b2ae3e68fc31c9584d7"
+}

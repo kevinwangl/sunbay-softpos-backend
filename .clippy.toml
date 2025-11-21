@@ -1,0 +1,19 @@
+# Clippy配置文件
+
+# 认知复杂度阈值
+cognitive-complexity-threshold = 30
+
+# 类型复杂度阈值
+type-complexity-threshold = 250
+
+# 单个字母变量名阈值
+single-char-binding-names-threshold = 4
+
+# 过多参数阈值
+too-many-arguments-threshold = 7
+
+# 过多行数阈值
+too-many-lines-threshold = 100
+
+# 文档注释
+missing-docs-in-crate-items = false

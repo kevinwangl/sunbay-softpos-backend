@@ -1,0 +1,28 @@
+server:
+  host: "127.0.0.1"
+  port: 8081
+
+database:
+  url: "sqlite::memory:"
+  max_connections: 2
+
+redis:
+  url: "redis://127.0.0.1:6379"
+
+jwt:
+  secret: "test-secret-key-for-testing-only-min-32-characters"
+  expiration_hours: 1
+  refresh_expiration_days: 1
+
+hsm:
+  base_url: "http://localhost:9999"
+  api_key: "test-api-key"
+  timeout_seconds: 5
+
+logging:
+  level: "debug"
+  format: "pretty"
+
+rate_limit:
+  requests_per_second: 1000
+  burst_size: 2000

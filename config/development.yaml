@@ -1,0 +1,28 @@
+server:
+  host: "127.0.0.1"
+  port: 8080
+
+database:
+  url: "sqlite://data/sunbay_softpos.db"
+  max_connections: 5
+
+redis:
+  url: "redis://127.0.0.1:6379"
+
+jwt:
+  secret: "development-secret-key-change-in-production-min-32-chars"
+  expiration_hours: 2
+  refresh_expiration_days: 7
+
+hsm:
+  base_url: "https://hsm-dev.futurex.com"
+  api_key: "dev-api-key-placeholder"
+  timeout_seconds: 30
+
+logging:
+  level: "debug"
+  format: "pretty"
+
+rate_limit:
+  requests_per_second: 100
+  burst_size: 200

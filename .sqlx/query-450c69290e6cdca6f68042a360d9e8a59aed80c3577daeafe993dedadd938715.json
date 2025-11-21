@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE devices\n            SET current_ksn = ?\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "450c69290e6cdca6f68042a360d9e8a59aed80c3577daeafe993dedadd938715"
+}

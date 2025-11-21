@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE devices\n            SET current_ksn = ?,\n                ipek_injected_at = COALESCE(?, ipek_injected_at),\n                updated_at = ?\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "87466c96c1dc0abe697687fa261593cc63b124f6ce54ed5d945123b0431e50d9"
+}

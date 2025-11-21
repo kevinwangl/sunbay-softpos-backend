@@ -1,0 +1,134 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                id, imei, model, os_version, tee_type, device_mode, public_key,\n                status, merchant_id, merchant_name, \n                security_score as \"security_score: i32\",\n                current_ksn, ipek_injected_at, \n                key_remaining_count as \"key_remaining_count: i32\", \n                key_total_count as \"key_total_count: i32\",\n                registered_at, approved_at, approved_by, last_active_at, updated_at\n            FROM devices\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "imei",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "model",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "os_version",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "tee_type",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "device_mode",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "public_key",
+        "ordinal": 6,
+        "type_info": "Blob"
+      },
+      {
+        "name": "status",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "merchant_id",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "merchant_name",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "security_score: i32",
+        "ordinal": 10,
+        "type_info": "Int64"
+      },
+      {
+        "name": "current_ksn",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "ipek_injected_at",
+        "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "key_remaining_count: i32",
+        "ordinal": 13,
+        "type_info": "Int64"
+      },
+      {
+        "name": "key_total_count: i32",
+        "ordinal": 14,
+        "type_info": "Int64"
+      },
+      {
+        "name": "registered_at",
+        "ordinal": 15,
+        "type_info": "Text"
+      },
+      {
+        "name": "approved_at",
+        "ordinal": 16,
+        "type_info": "Text"
+      },
+      {
+        "name": "approved_by",
+        "ordinal": 17,
+        "type_info": "Text"
+      },
+      {
+        "name": "last_active_at",
+        "ordinal": 18,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 19,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "1757b6340c9f35667be334744b3587d3a0ed65cae27312017a5f3a24b2d11a97"
+}

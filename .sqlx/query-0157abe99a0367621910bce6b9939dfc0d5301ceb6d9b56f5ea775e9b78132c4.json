@@ -1,0 +1,68 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                id, device_id,\n                threat_type as \"threat_type: _\",\n                severity as \"severity: _\",\n                status as \"status: _\",\n                description, detected_at, resolved_at, resolved_by\n            FROM threat_events\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "device_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "threat_type: _",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "severity: _",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "status: _",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "description",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "detected_at",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "resolved_at",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "resolved_by",
+        "ordinal": 8,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "0157abe99a0367621910bce6b9939dfc0d5301ceb6d9b56f5ea775e9b78132c4"
+}

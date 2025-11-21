@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT COUNT(*) as count\n            FROM threat_events\n            WHERE severity = 'Medium' AND status = 'Active'\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "count",
+        "ordinal": 0,
+        "type_info": "Int"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8e6ff5fa1b4de5c6e8e96a72a0f7ca7403f77ef08c71fe0629fcc4285ef36e75"
+}

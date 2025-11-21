@@ -1,0 +1,13 @@
+# Cargo configuration for testing
+
+[test]
+# Run tests with specific environment variables
+[env]
+TEST_DATABASE_URL = "postgres://postgres:postgres@localhost/softpos_test"
+RUST_LOG = "debug"
+RUST_BACKTRACE = "1"
+
+# Test profile optimizations
+[profile.test]
+opt-level = 1
+debug = true

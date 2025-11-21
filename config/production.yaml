@@ -1,0 +1,32 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+database:
+  url: "sqlite://data/sunbay_softpos.db"
+  max_connections: 10
+
+redis:
+  url: "redis://localhost:6379"
+
+jwt:
+  # IMPORTANT: Change this in production!
+  # Use environment variable: APP_JWT__SECRET
+  secret: "CHANGE-THIS-IN-PRODUCTION-USE-ENV-VAR"
+  expiration_hours: 2
+  refresh_expiration_days: 7
+
+hsm:
+  # IMPORTANT: Configure these via environment variables
+  # APP_HSM__BASE_URL and APP_HSM__API_KEY
+  base_url: "https://hsm.futurex.com"
+  api_key: "CHANGE-THIS-USE-ENV-VAR"
+  timeout_seconds: 30
+
+logging:
+  level: "info"
+  format: "json"
+
+rate_limit:
+  requests_per_second: 100
+  burst_size: 200

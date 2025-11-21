@@ -1,0 +1,80 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                id, device_id, \n                security_score as \"security_score: i32\",\n                root_status as \"root_status: bool\",\n                bootloader_status as \"bootloader_status: bool\",\n                system_integrity as \"system_integrity: bool\",\n                app_integrity as \"app_integrity: bool\",\n                tee_status as \"tee_status: bool\",\n                recommended_action as \"recommended_action: _\",\n                details, created_at\n            FROM health_checks\n            WHERE device_id = ?\n            ORDER BY created_at DESC\n            LIMIT 1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "device_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "security_score: i32",
+        "ordinal": 2,
+        "type_info": "Int64"
+      },
+      {
+        "name": "root_status: bool",
+        "ordinal": 3,
+        "type_info": "Int64"
+      },
+      {
+        "name": "bootloader_status: bool",
+        "ordinal": 4,
+        "type_info": "Int64"
+      },
+      {
+        "name": "system_integrity: bool",
+        "ordinal": 5,
+        "type_info": "Int64"
+      },
+      {
+        "name": "app_integrity: bool",
+        "ordinal": 6,
+        "type_info": "Int64"
+      },
+      {
+        "name": "tee_status: bool",
+        "ordinal": 7,
+        "type_info": "Int64"
+      },
+      {
+        "name": "recommended_action: _",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "details",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 10,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "6f49c24f10a4d05ba1a1e8f090b02b0bbd8607b1339871e852656511d5b3a0a5"
+}

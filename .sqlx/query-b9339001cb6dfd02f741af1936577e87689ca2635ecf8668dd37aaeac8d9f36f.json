@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                UPDATE devices\n                SET status = ?, approved_at = ?, approved_by = ?\n                WHERE id = ?\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "b9339001cb6dfd02f741af1936577e87689ca2635ecf8668dd37aaeac8d9f36f"
+}

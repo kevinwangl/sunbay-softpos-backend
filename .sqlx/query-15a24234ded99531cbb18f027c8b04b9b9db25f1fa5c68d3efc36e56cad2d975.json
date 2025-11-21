@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE transactions\n            SET status = ?,\n                authorization_code = ?,\n                response_code = ?,\n                response_message = ?,\n                updated_at = ?\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "15a24234ded99531cbb18f027c8b04b9b9db25f1fa5c68d3efc36e56cad2d975"
+}

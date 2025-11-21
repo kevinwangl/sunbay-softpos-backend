@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE sdk_versions\n            SET status = ?, released_at = ?\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "bda3e5c725200dbbe78acbac7552dd236a23df2fe1ea28479d66af533faf166b"
+}

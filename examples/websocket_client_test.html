@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket通知测试客户端</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .status.disconnected {
+            background-color: #f44336;
+            color: white;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .disconnect-btn {
+            background-color: #f44336;
+        }
+        .disconnect-btn:hover {
+            background-color: #da190b;
+        }
+        .notifications {
+            margin-top: 20px;
+        }
+        .notification {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        .notification.HIGH {
+            background-color: #ffebee;
+            border-color: #f44336;
+        }
+        .notification.MEDIUM {
+            background-color: #fff3e0;
+            border-color: #ff9800;
+        }
+        .notification.LOW {
+            background-color: #e3f2fd;
+            border-color: #2196F3;
+        }
+        .notification.INFO {
+            background-color: #f1f8e9;
+            border-color: #8bc34a;
+        }
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .notification-title {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .notification-severity {
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .notification-severity.HIGH {
+            background-color: #f44336;
+            color: white;
+        }
+        .notification-severity.MEDIUM {
+            background-color: #ff9800;
+            color: white;
+        }
+        .notification-severity.LOW {
+            background-color: #2196F3;
+            color: white;
+        }
+        .notification-severity.INFO {
+            background-color: #8bc34a;
+            color: white;
+        }
+        .notification-message {
+            margin: 8px 0;
+            color: #555;
+        }
+        .notification-meta {
+            font-size: 12px;
+            color: #888;
+            margin-top: 8px;
+        }
+        .notification-data {
+            background-color: #f5f5f5;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .clear-btn {
+            background-color: #9e9e9e;
+        }
+        .clear-btn:hover {
+            background-color: #757575;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 WebSocket通知测试客户端</h1>
+        
+        <div id="status" class="status disconnected">
+            未连接
+        </div>
+
+        <div class="controls">
+            <input type="text" id="wsUrl" value="ws://localhost:8080/api/v1/ws" placeholder="WebSocket URL">
+            <button id="connectBtn" onclick="connect()">连接</button>
+            <button id="disconnectBtn" class="disconnect-btn" onclick="disconnect()" disabled>断开</button>
+            <button class="clear-btn" onclick="clearNotifications()">清空通知</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalNotifications">0</div>
+                <div class="stat-label">总通知数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="connectionTime">--</div>
+                <div class="stat-label">连接时长</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="lastPing">--</div>
+                <div class="stat-label">最后心跳</div>
+            </div>
+        </div>
+
+        <div class="notifications">
+            <h2>通知列表</h2>
+            <div id="notificationList"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let connectionId = null;
+        let notificationCount = 0;
+        let connectionStartTime = null;
+        let connectionTimeInterval = null;
+
+        function connect() {
+            const url = document.getElementById('wsUrl').value;
+            
+            try {
+                ws = new WebSocket(url);
+                
+                ws.onopen = () => {
+                    updateStatus('connected', '已连接');
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('disconnectBtn').disabled = false;
+                    connectionStartTime = Date.now();
+                    startConnectionTimer();
+                    addLog('WebSocket连接已建立');
+                };
+
+                ws.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    handleMessage(message);
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket错误:', error);
+                    addLog('WebSocket错误: ' + error.message, 'error');
+                };
+
+                ws.onclose = () => {
+                    updateStatus('disconnected', '已断开');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('disconnectBtn').disabled = true;
+                    stopConnectionTimer();
+                    addLog('WebSocket连接已关闭');
+                };
+            } catch (error) {
+                alert('连接失败: ' + error.message);
+            }
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function handleMessage(message) {
+            console.log('收到消息:', message);
+
+            switch (message.type) {
+                case 'connected':
+                    connectionId = message.connection_id;
+                    addLog(`连接ID: ${connectionId}`);
+                    break;
+
+                case 'ping':
+                    // 响应心跳
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'pong' }));
+                    }
+                    updateLastPing();
+                    addLog('收到心跳，已响应');
+                    break;
+
+                case 'security_alert':
+                case 'threat_alert':
+                case 'key_warning':
+                case 'device_status_change':
+                case 'system_alert':
+                    addNotification(message);
+                    break;
+
+                default:
+                    addLog('未知消息类型: ' + message.type);
+            }
+        }
+
+        function addNotification(notification) {
+            notificationCount++;
+            document.getElementById('totalNotifications').textContent = notificationCount;
+
+            const notificationList = document.getElementById('notificationList');
+            const notificationEl = document.createElement('div');
+            notificationEl.className = `notification ${notification.severity}`;
+            
+            const typeMap = {
+                'security_alert': '🔒 安全告警',
+                'threat_alert': '⚠️ 威胁告警',
+                'key_warning': '🔑 密钥预警',
+                'device_status_change': '📱 设备状态变更',
+                'system_alert': '🖥️ 系统告警'
+            };
+
+            notificationEl.innerHTML = `
+                <div class="notification-header">
+                    <div class="notification-title">${typeMap[notification.type] || notification.title}</div>
+                    <div class="notification-severity ${notification.severity}">${notification.severity}</div>
+                </div>
+                <div class="notification-message">${notification.message}</div>
+                <div class="notification-meta">
+                    ${notification.device_id ? `设备: ${notification.device_id} | ` : ''}
+                    ${notification.threat_id ? `威胁ID: ${notification.threat_id} | ` : ''}
+                    时间: ${new Date(notification.timestamp).toLocaleString('zh-CN')}
+                </div>
+                ${notification.data ? `<div class="notification-data">${JSON.stringify(notification.data, null, 2)}</div>` : ''}
+            `;
+
+            notificationList.insertBefore(notificationEl, notificationList.firstChild);
+        }
+
+        function addLog(message, type = 'info') {
+            console.log(`[${type}] ${message}`);
+        }
+
+        function updateStatus(status, text) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${status}`;
+            statusEl.textContent = text;
+        }
+
+        function updateLastPing() {
+            document.getElementById('lastPing').textContent = new Date().toLocaleTimeString('zh-CN');
+        }
+
+        function startConnectionTimer() {
+            connectionTimeInterval = setInterval(() => {
+                if (connectionStartTime) {
+                    const elapsed = Math.floor((Date.now() - connectionStartTime) / 1000);
+                    const minutes = Math.floor(elapsed / 60);
+                    const seconds = elapsed % 60;
+                    document.getElementById('connectionTime').textContent = 
+                        `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function stopConnectionTimer() {
+            if (connectionTimeInterval) {
+                clearInterval(connectionTimeInterval);
+                connectionTimeInterval = null;
+            }
+            document.getElementById('connectionTime').textContent = '--';
+        }
+
+        function clearNotifications() {
+            document.getElementById('notificationList').innerHTML = '';
+            notificationCount = 0;
+            document.getElementById('totalNotifications').textContent = '0';
+        }
+
+        // 页面加载时自动连接
+        window.addEventListener('load', () => {
+            // 可以取消注释以自动连接
+            // connect();
+        });
+
+        // 页面卸载时断开连接
+        window.addEventListener('beforeunload', () => {
+            if (ws) {
+                ws.close();
+            }
+        });
+    </script>
+</body>
+</html>

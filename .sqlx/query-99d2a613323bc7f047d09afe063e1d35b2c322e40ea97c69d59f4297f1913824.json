@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE devices\n            SET key_remaining_count = key_remaining_count - 1\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "99d2a613323bc7f047d09afe063e1d35b2c322e40ea97c69d59f4297f1913824"
+}

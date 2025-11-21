@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO health_checks (\n                id, device_id, security_score, root_status, bootloader_status,\n                system_integrity, app_integrity, tee_status, recommended_action,\n                details, created_at\n            )\n            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 11
+    },
+    "nullable": []
+  },
+  "hash": "49c96f3a65feb0467d9462353adcdff1473fd7aa91f78c474f7fec97ce99e8dc"
+}

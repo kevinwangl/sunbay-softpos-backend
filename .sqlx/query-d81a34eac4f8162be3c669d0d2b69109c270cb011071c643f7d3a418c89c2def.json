@@ -1,0 +1,68 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                id, operation, operator, device_id,\n                result as \"result: _\",\n                details, ip_address, user_agent, created_at\n            FROM audit_logs\n            WHERE operator = ?\n            ORDER BY created_at DESC\n            LIMIT ? OFFSET ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "operation",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "operator",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "device_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "result: _",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "details",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "ip_address",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_agent",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 8,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "d81a34eac4f8162be3c669d0d2b69109c270cb011071c643f7d3a418c89c2def"
+}
