@@ -40,7 +40,7 @@ pub async fn list_threats(
     Query(query): Query<ListThreatsQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     // 调用服务层
-    let response = state
+    let response_data = state
         .threat_detection_service
         .list_threats(
             query.device_id.as_deref(),
@@ -52,7 +52,13 @@ pub async fn list_threats(
         )
         .await?;
 
-    Ok((StatusCode::OK, Json(response)))
+    let wrapped_response = serde_json::json!({
+        "code": 200,
+        "message": "Success",
+        "data": response_data
+    });
+
+    Ok((StatusCode::OK, Json(wrapped_response)))
 }
 
 /// 获取威胁详情处理器

@@ -45,6 +45,11 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         // 认证相关
         .route("/auth/logout", post(handlers::logout))
         .route("/auth/me", get(handlers::get_current_user))
+        // 仪表盘
+        .route(
+            "/dashboard/health-overview",
+            get(handlers::get_dashboard_health_overview),
+        )
         // 设备管理
         .route("/devices", get(handlers::list_devices))
         .route("/devices/statistics", get(handlers::get_device_statistics))

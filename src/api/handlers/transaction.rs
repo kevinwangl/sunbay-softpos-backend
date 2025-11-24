@@ -70,7 +70,7 @@ pub async fn list_transactions(
     Query(query): Query<ListTransactionsQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     // 调用服务层
-    let response = state
+    let response_data = state
         .transaction_service
         .list_transactions(
             query.device_id.as_deref(),
@@ -81,7 +81,13 @@ pub async fn list_transactions(
         )
         .await?;
 
-    Ok((StatusCode::OK, Json(response)))
+    let wrapped_response = serde_json::json!({
+        "code": 200,
+        "message": "Success",
+        "data": response_data
+    });
+
+    Ok((StatusCode::OK, Json(wrapped_response)))
 }
 
 /// 获取交易详情处理器

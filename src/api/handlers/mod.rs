@@ -1,5 +1,6 @@
 pub mod audit;
 pub mod auth;
+pub mod dashboard;
 pub mod device;
 pub mod health;
 pub mod key;
@@ -12,6 +13,7 @@ pub use audit::{
     export_logs, get_audit_statistics, get_device_logs, get_log, get_operator_logs, list_logs,
 };
 pub use auth::{get_current_user, login, logout, refresh_token, verify_token};
+pub use dashboard::get_health_overview as get_dashboard_health_overview;
 pub use device::{
     approve_device, get_device, get_device_statistics, list_devices, register_device,
     reject_device, resume_device, revoke_device, suspend_device,

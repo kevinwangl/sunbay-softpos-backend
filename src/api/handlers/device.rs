@@ -39,12 +39,18 @@ pub async fn register_device(
     let operator_id = "system";
 
     // 调用服务层
-    let response = state
+    let response_data = state
         .device_service
         .register_device(req, &operator_id)
         .await?;
 
-    Ok((StatusCode::CREATED, Json(response)))
+    let wrapped_response = serde_json::json!({
+        "code": 201,
+        "message": "Device registered successfully",
+        "data": response_data
+    });
+
+    Ok((StatusCode::CREATED, Json(wrapped_response)))
 }
 
 /// 设备列表处理器
@@ -54,18 +60,31 @@ pub async fn list_devices(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ListDevicesQuery>,
 ) -> Result<impl IntoResponse, AppError> {
+    let page = query.page.unwrap_or(1);
+    let page_size = query.page_size.unwrap_or(20);
+    
+    // 将page和page_size转换为limit和offset
+    let limit = page_size;
+    let offset = (page - 1) * page_size;
+    
     // 调用服务层
-    let response = state
+    let response_data = state
         .device_service
         .list_devices(
             query.status,
             query.search.as_deref(),
-            query.page.unwrap_or(1),
-            query.page_size.unwrap_or(20),
+            limit,
+            offset,
         )
         .await?;
 
-    Ok((StatusCode::OK, Json(response)))
+    let wrapped_response = serde_json::json!({
+        "code": 200,
+        "message": "Success",
+        "data": response_data
+    });
+
+    Ok((StatusCode::OK, Json(wrapped_response)))
 }
 
 /// 获取设备详情处理器

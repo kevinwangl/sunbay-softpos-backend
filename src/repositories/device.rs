@@ -93,10 +93,12 @@ impl DeviceRepository {
             SELECT 
                 id, imei, model, os_version, 
                 tee_type, device_mode, public_key,
-                status, security_score,
-                ksn, key_injected_at, key_updated_at,
-                key_usage_count, key_max_usage,
-                registered_at, approved_at, approved_by
+                status, merchant_id, merchant_name,
+                security_score,
+                current_ksn, ipek_injected_at,
+                key_remaining_count, key_total_count,
+                registered_at, approved_at, approved_by,
+                last_active_at, updated_at
             FROM devices
             WHERE 1=1
             "#,

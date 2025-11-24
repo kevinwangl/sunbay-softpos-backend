@@ -83,7 +83,7 @@ pub async fn login(
         .ok(); // 忽略审计日志错误
 
     // 构建响应
-    let response = LoginResponse {
+    let response_data = LoginResponse {
         access_token,
         refresh_token,
         token_type: "Bearer".to_string(),
@@ -95,7 +95,13 @@ pub async fn login(
         },
     };
 
-    Ok((StatusCode::OK, Json(response)))
+    let wrapped_response = serde_json::json!({
+        "code": 200,
+        "message": "Login successful",
+        "data": response_data
+    });
+
+    Ok((StatusCode::OK, Json(wrapped_response)))
 }
 
 /// 刷新Token处理器
@@ -128,14 +134,20 @@ pub async fn refresh_token(
     }
 
     // 构建响应
-    let response = RefreshTokenResponse {
+    let response_data = RefreshTokenResponse {
         access_token: new_access_token,
         refresh_token: new_refresh_token,
         token_type: "Bearer".to_string(),
         expires_in: state.config.jwt.expiration_hours * 3600,
     };
 
-    Ok((StatusCode::OK, Json(response)))
+    let wrapped_response = serde_json::json!({
+        "code": 200,
+        "message": "Token refreshed successfully",
+        "data": response_data
+    });
+
+    Ok((StatusCode::OK, Json(wrapped_response)))
 }
 
 /// 登出处理器

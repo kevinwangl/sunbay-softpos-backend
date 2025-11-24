@@ -101,7 +101,9 @@ pub struct DeviceListResponse {
 
 /// 登录响应
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LoginResponse {
+    #[serde(rename = "token")]
     pub access_token: String,
     pub refresh_token: String,
     pub token_type: String,
@@ -111,7 +113,9 @@ pub struct LoginResponse {
 
 /// 用户信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UserInfo {
+    #[serde(rename = "id")]
     pub user_id: String,
     pub username: String,
     pub role: String,
@@ -395,5 +399,39 @@ pub struct CreateVersionResponse {
     pub version: String,
     pub status: crate::models::VersionStatus,
     pub message: String,
+}
+
+/// 仪表盘健康概览响应
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DashboardHealthOverviewResponse {
+    pub total_devices: i64,
+    pub online_devices: i64,
+    pub abnormal_devices: i64,
+    pub average_security_score: f64,
+    pub status_distribution: Vec<StatusDistribution>,
+    pub score_distribution: Vec<ScoreDistribution>,
+    pub recent_abnormal_devices: Vec<AbnormalDevice>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StatusDistribution {
+    pub status: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScoreDistribution {
+    pub range: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AbnormalDevice {
+    pub id: String,
+    pub merchant_name: String,
+    pub security_score: i32,
+    pub last_check_at: String,
 }
 
