@@ -106,7 +106,7 @@ impl DeviceRepository {
 
         // 添加状态筛选
         if let Some(s) = status {
-            query.push_str(&format!(" AND status = '{:?}'", s));
+            query.push_str(&format!(" AND status = '{}'", s.as_str()));
         }
 
         // 添加搜索条件
@@ -137,7 +137,7 @@ impl DeviceRepository {
         let mut query = String::from("SELECT COUNT(*) as count FROM devices WHERE 1=1");
 
         if let Some(s) = status {
-            query.push_str(&format!(" AND status = '{:?}'", s));
+            query.push_str(&format!(" AND status = '{}'", s.as_str()));
         }
 
         if let Some(search_term) = search {
@@ -165,6 +165,8 @@ impl DeviceRepository {
 
         let status_str = status.as_str();
         
+        let status_upper = status_str.to_uppercase();
+        
         if status == DeviceStatus::Active {
             // 审批通过
             sqlx::query!(
@@ -173,7 +175,7 @@ impl DeviceRepository {
                 SET status = ?, approved_at = ?, approved_by = ?
                 WHERE id = ?
                 "#,
-                status_str,
+                status_upper,
                 now,
                 approved_by,
                 id
@@ -188,7 +190,7 @@ impl DeviceRepository {
                 SET status = ?
                 WHERE id = ?
                 "#,
-                status_str,
+                status_upper,
                 id
             )
             .execute(&self.pool)
@@ -288,31 +290,31 @@ impl DeviceRepository {
             .await?;
 
         let active = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM devices WHERE status = 'Active'",
+            "SELECT COUNT(*) FROM devices WHERE status = 'ACTIVE'",
         )
         .fetch_one(&self.pool)
         .await?;
 
         let pending = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM devices WHERE status = 'Pending'",
+            "SELECT COUNT(*) FROM devices WHERE status = 'PENDING'",
         )
         .fetch_one(&self.pool)
         .await?;
 
         let suspended = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM devices WHERE status = 'Suspended'",
+            "SELECT COUNT(*) FROM devices WHERE status = 'SUSPENDED'",
         )
         .fetch_one(&self.pool)
         .await?;
 
         let revoked = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM devices WHERE status = 'Revoked'",
+            "SELECT COUNT(*) FROM devices WHERE status = 'REVOKED'",
         )
         .fetch_one(&self.pool)
         .await?;
 
         let avg_score = sqlx::query_scalar::<_, f64>(
-            "SELECT AVG(security_score) FROM devices WHERE status = 'Active'",
+            "SELECT AVG(security_score) FROM devices WHERE status = 'ACTIVE'",
         )
         .fetch_one(&self.pool)
         .await?;

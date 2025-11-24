@@ -118,7 +118,12 @@ pub async fn approve_device(
         .approve_device(req)
         .await?;
 
-    Ok((StatusCode::OK, Json(response)))
+    let wrapped_response = serde_json::json!({
+        "success": true,
+        "message": "Device approved successfully"
+    });
+
+    Ok((StatusCode::OK, Json(wrapped_response)))
 }
 
 /// 拒绝设备处理器

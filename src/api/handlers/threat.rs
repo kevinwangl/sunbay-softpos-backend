@@ -47,8 +47,8 @@ pub async fn list_threats(
             query.status,
             query.severity,
             query.threat_type,
-            query.page.unwrap_or(1),
-            query.page_size.unwrap_or(20),
+            query.page_size.unwrap_or(20), // limit
+            (query.page.unwrap_or(1) - 1) * query.page_size.unwrap_or(20), // offset
         )
         .await?;
 
@@ -148,8 +148,8 @@ pub async fn get_device_threat_history(
             query.status,
             query.severity,
             query.threat_type,
-            query.page.unwrap_or(1),
-            query.page_size.unwrap_or(20),
+            query.page_size.unwrap_or(20), // limit
+            (query.page.unwrap_or(1) - 1) * query.page_size.unwrap_or(20), // offset
         )
         .await?;
 

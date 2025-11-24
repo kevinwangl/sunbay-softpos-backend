@@ -76,8 +76,8 @@ pub async fn list_transactions(
             query.device_id.as_deref(),
             query.status,
             None, // transaction_type
-            query.page.unwrap_or(1),
-            query.page_size.unwrap_or(20),
+            query.page_size.unwrap_or(20), // limit
+            (query.page.unwrap_or(1) - 1) * query.page_size.unwrap_or(20), // offset
         )
         .await?;
 
@@ -121,8 +121,8 @@ pub async fn get_device_transaction_history(
             Some(&device_id),
             query.status,
             None, // transaction_type
-            query.page.unwrap_or(1),
-            query.page_size.unwrap_or(20),
+            query.page_size.unwrap_or(20), // limit
+            (query.page.unwrap_or(1) - 1) * query.page_size.unwrap_or(20), // offset
         )
         .await?;
 

@@ -50,7 +50,7 @@ declare -a DEVICE_IDS
 
 # 设备1 - SUNMI P2 Pro (高安全评分)
 echo "正在注册设备1: SUNMI P2 Pro..."
-DEVICE1=$(curl -s -X POST "$BASE_URL/devices/register" \
+REG_RESPONSE_1=$(curl -s -X POST "$BASE_URL/devices/register" \
   -H "Content-Type: application/json" \
   -d '{
     "imei": "866123456789001",
@@ -58,39 +58,34 @@ DEVICE1=$(curl -s -X POST "$BASE_URL/devices/register" \
     "os_version": "Android 11",
     "tee_type": "QTEE",
     "public_key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw...",
-    "device_mode": "FULL_POS"
+    "device_mode": "PIN_PAD"
   }')
 
-DEVICE1_ID=$(echo $DEVICE1 | jq -r '.data.device_id // empty')
-if [ -z "$DEVICE1_ID" ]; then
-  DEVICE1_ID=$(echo $DEVICE1 | jq -r '.data // empty')
-fi
-echo -e "${GREEN}✓ 设备1注册成功: $DEVICE1_ID${NC}"
-DEVICE_IDS[0]=$DEVICE1_ID
+DEVICE_ID_1=$(echo $REG_RESPONSE_1 | jq -r '.data.device_id')
+KSN_1=$(echo $REG_RESPONSE_1 | jq -r '.data.ksn')
+echo -e "${GREEN}✓ 设备1注册成功: $DEVICE_ID_1 (KSN: $KSN_1)${NC}"
+DEVICE_IDS[0]=$DEVICE_ID_1
 
 # 设备2 - SUNMI P2 (中等安全评分)
 echo "正在注册设备2: SUNMI P2..."
-DEVICE2=$(curl -s -X POST "$BASE_URL/devices/register" \
+REG_RESPONSE_2=$(curl -s -X POST "$BASE_URL/devices/register" \
   -H "Content-Type: application/json" \
   -d '{
     "imei": "866123456789002",
     "model": "SUNMI P2",
     "os_version": "Android 10",
-    "tee_type": "TRUSTZONE",
+    "tee_type": "TRUST_ZONE",
     "public_key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAx...",
-    "device_mode": "PINPAD"
+    "device_mode": "PIN_PAD"
   }')
-
-DEVICE2_ID=$(echo $DEVICE2 | jq -r '.data.device_id // empty')
-if [ -z "$DEVICE2_ID" ]; then
-  DEVICE2_ID=$(echo $DEVICE2 | jq -r '.data // empty')
-fi
-echo -e "${GREEN}✓ 设备2注册成功: $DEVICE2_ID${NC}"
-DEVICE_IDS[1]=$DEVICE2_ID
+DEVICE_ID_2=$(echo $REG_RESPONSE_2 | jq -r '.data.device_id')
+KSN_2=$(echo $REG_RESPONSE_2 | jq -r '.data.ksn')
+echo -e "${GREEN}✓ 设备2注册成功: $DEVICE_ID_2 (KSN: $KSN_2)${NC}"
+DEVICE_IDS[1]=$DEVICE_ID_2
 
 # 设备3 - SUNMI V2 Pro (待审批)
 echo "正在注册设备3: SUNMI V2 Pro..."
-DEVICE3=$(curl -s -X POST "$BASE_URL/devices/register" \
+REG_RESPONSE_3=$(curl -s -X POST "$BASE_URL/devices/register" \
   -H "Content-Type: application/json" \
   -d '{
     "imei": "866123456789003",
@@ -101,32 +96,28 @@ DEVICE3=$(curl -s -X POST "$BASE_URL/devices/register" \
     "device_mode": "FULL_POS"
   }')
 
-DEVICE3_ID=$(echo $DEVICE3 | jq -r '.data.device_id // empty')
-if [ -z "$DEVICE3_ID" ]; then
-  DEVICE3_ID=$(echo $DEVICE3 | jq -r '.data // empty')
-fi
-echo -e "${GREEN}✓ 设备3注册成功: $DEVICE3_ID${NC}"
-DEVICE_IDS[2]=$DEVICE3_ID
+DEVICE_ID_3=$(echo $REG_RESPONSE_3 | jq -r '.data.device_id')
+KSN_3=$(echo $REG_RESPONSE_3 | jq -r '.data.ksn')
+echo -e "${GREEN}✓ 设备3注册成功: $DEVICE_ID_3 (KSN: $KSN_3)${NC}"
+DEVICE_IDS[2]=$DEVICE_ID_3
 
 # 设备4 - SUNMI P1 (低安全评分)
 echo "正在注册设备4: SUNMI P1..."
-DEVICE4=$(curl -s -X POST "$BASE_URL/devices/register" \
+REG_RESPONSE_4=$(curl -s -X POST "$BASE_URL/devices/register" \
   -H "Content-Type: application/json" \
   -d '{
     "imei": "866123456789004",
     "model": "SUNMI P1",
     "os_version": "Android 9",
-    "tee_type": "TRUSTZONE",
+    "tee_type": "TRUST_ZONE",
     "public_key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz...",
-    "device_mode": "FULL_POS"
+    "device_mode": "PIN_PAD"
   }')
 
-DEVICE4_ID=$(echo $DEVICE4 | jq -r '.data.device_id // empty')
-if [ -z "$DEVICE4_ID" ]; then
-  DEVICE4_ID=$(echo $DEVICE4 | jq -r '.data // empty')
-fi
-echo -e "${GREEN}✓ 设备4注册成功: $DEVICE4_ID${NC}"
-DEVICE_IDS[3]=$DEVICE4_ID
+DEVICE_ID_4=$(echo $REG_RESPONSE_4 | jq -r '.data.device_id')
+KSN_4=$(echo $REG_RESPONSE_4 | jq -r '.data.ksn')
+echo -e "${GREEN}✓ 设备4注册成功: $DEVICE_ID_4 (KSN: $KSN_4)${NC}"
+DEVICE_IDS[3]=$DEVICE_ID_4
 
 echo ""
 
@@ -162,56 +153,74 @@ echo -e "${BLUE}━━━ 步骤 4: 添加交易记录 ━━━${NC}"
 
 # 交易1 - 成功的购买交易
 echo "添加交易1: 购买交易 (成功)..."
-TRANS1=$(curl -s -X POST "$BASE_URL/transactions" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"device_id\": \"${DEVICE_IDS[0]}\",
-    \"transaction_type\": \"purchase\",
-    \"amount\": 15800,
-    \"currency\": \"CNY\",
-    \"card_number_masked\": \"****1234\",
-    \"merchant_id\": \"M001\",
-    \"terminal_id\": \"T001\",
-    \"status\": \"success\"
-  }")
+# 1. 交易鉴证
+ATTEST_RESPONSE_1=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{
+  \"device_id\": \"${DEVICE_IDS[0]}\",
+  \"amount\": 15800,
+  \"currency\": \"CNY\"
+}" "$BASE_URL/transactions/attest")
+TRANS_TOKEN_1=$(echo $ATTEST_RESPONSE_1 | jq -r '.data.transaction_token')
 
+# 2. 交易处理
+TRANS_RESPONSE_1=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{
+  \"device_id\": \"${DEVICE_IDS[0]}\",
+  \"transaction_type\": \"PAYMENT\",
+  \"amount\": 15800,
+  \"currency\": \"CNY\",
+  \"ksn\": \"$KSN_1\",
+  \"encrypted_pin_block\": \"1234567890ABCDEF\",
+  \"card_number_masked\": \"411111******1234\",
+  \"transaction_token\": \"$TRANS_TOKEN_1\"
+}" "$BASE_URL/transactions/process")
+echo "Response: $TRANS_RESPONSE_1"
 echo -e "${GREEN}✓ 交易1添加成功${NC}"
 
 # 交易2 - 失败的退款交易
 echo "添加交易2: 退款交易 (失败)..."
-TRANS2=$(curl -s -X POST "$BASE_URL/transactions" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"device_id\": \"${DEVICE_IDS[1]}\",
-    \"transaction_type\": \"refund\",
-    \"amount\": 5000,
-    \"currency\": \"CNY\",
-    \"card_number_masked\": \"****5678\",
-    \"merchant_id\": \"M002\",
-    \"terminal_id\": \"T002\",
-    \"status\": \"failed\"
-  }")
+# 1. 交易鉴证
+ATTEST_RESPONSE_2=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{
+  \"device_id\": \"${DEVICE_IDS[1]}\",
+  \"amount\": 5000,
+  \"currency\": \"CNY\"
+}" "$BASE_URL/transactions/attest")
+TRANS_TOKEN_2=$(echo $ATTEST_RESPONSE_2 | jq -r '.data.transaction_token')
 
+# 2. 交易处理
+TRANS_RESPONSE_2=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{
+  \"device_id\": \"${DEVICE_IDS[1]}\",
+  \"transaction_type\": \"REFUND\",
+  \"amount\": 5000,
+  \"currency\": \"CNY\",
+  \"ksn\": \"$KSN_2\",
+  \"encrypted_pin_block\": \"1234567890ABCDEF\",
+  \"card_number_masked\": \"411111******5678\",
+  \"transaction_token\": \"$TRANS_TOKEN_2\"
+}" "$BASE_URL/transactions/process")
+echo "Response: $TRANS_RESPONSE_2"
 echo -e "${GREEN}✓ 交易2添加成功${NC}"
 
 # 交易3 - 预授权交易
 echo "添加交易3: 预授权交易 (成功)..."
-TRANS3=$(curl -s -X POST "$BASE_URL/transactions" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"device_id\": \"${DEVICE_IDS[3]}\",
-    \"transaction_type\": \"pre_auth\",
-    \"amount\": 50000,
-    \"currency\": \"CNY\",
-    \"card_number_masked\": \"****9012\",
-    \"merchant_id\": \"M003\",
-    \"terminal_id\": \"T003\",
-    \"status\": \"success\"
-  }")
+# 1. 交易鉴证
+ATTEST_RESPONSE_3=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{
+  \"device_id\": \"${DEVICE_IDS[3]}\",
+  \"amount\": 50000,
+  \"currency\": \"CNY\"
+}" "$BASE_URL/transactions/attest")
+TRANS_TOKEN_3=$(echo $ATTEST_RESPONSE_3 | jq -r '.data.transaction_token')
 
+# 2. 交易处理
+TRANS_RESPONSE_3=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{
+  \"device_id\": \"${DEVICE_IDS[3]}\",
+  \"transaction_type\": \"PREAUTH\",
+  \"amount\": 50000,
+  \"currency\": \"CNY\",
+  \"ksn\": \"$KSN_3\",
+  \"encrypted_pin_block\": \"1234567890ABCDEF\",
+  \"card_number_masked\": \"411111******9012\",
+  \"transaction_token\": \"$TRANS_TOKEN_3\"
+}" "$BASE_URL/transactions/process")
+echo "Response: $TRANS_RESPONSE_3"
 echo -e "${GREEN}✓ 交易3添加成功${NC}"
 echo ""
 
@@ -269,7 +278,7 @@ echo -e "${BLUE}━━━ 步骤 6: 数据验证 ━━━${NC}"
 
 echo "查询设备列表..."
 DEVICES=$(curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/devices?page=1&page_size=20")
-DEVICE_COUNT=$(echo $DEVICES | jq '.data.items | length')
+DEVICE_COUNT=$(echo $DEVICES | jq '.data.devices | length')
 echo -e "${GREEN}✓ 设备总数: $DEVICE_COUNT${NC}"
 
 echo "查询设备统计..."
@@ -279,19 +288,19 @@ echo $STATS | jq '.data // .'
 echo ""
 echo "查询交易列表..."
 TRANSACTIONS=$(curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/transactions?page=1&page_size=20")
-TRANS_COUNT=$(echo $TRANSACTIONS | jq '.data.items | length // 0')
+TRANS_COUNT=$(echo $TRANSACTIONS | jq '.data.transactions | length // 0')
 echo -e "${GREEN}✓ 交易总数: $TRANS_COUNT${NC}"
 
 echo ""
 echo "查询威胁列表..."
 THREATS=$(curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/threats?page=1&page_size=20")
-THREAT_COUNT=$(echo $THREATS | jq '.data.items | length // 0')
+THREAT_COUNT=$(echo $THREATS | jq '.data.threats | length // 0')
 echo -e "${GREEN}✓ 威胁总数: $THREAT_COUNT${NC}"
 
 echo ""
 echo "查询待审批设备..."
-PENDING=$(curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/devices?status=pending&page=1&page_size=20")
-PENDING_COUNT=$(echo $PENDING | jq '.data.items | length // 0')
+PENDING=$(curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/devices?status=PENDING&page=1&page_size=20")
+PENDING_COUNT=$(echo $PENDING | jq '.data.devices | length // 0')
 echo -e "${GREEN}✓ 待审批设备: $PENDING_COUNT${NC}"
 
 echo ""

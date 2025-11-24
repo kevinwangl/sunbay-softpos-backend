@@ -48,6 +48,7 @@ impl ThreatEvent {
 /// 威胁类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "TEXT", rename_all = "PascalCase")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ThreatType {
     RootDetection,
     BootloaderUnlock,
@@ -77,6 +78,7 @@ impl std::fmt::Display for ThreatType {
 /// 威胁严重程度
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "TEXT", rename_all = "PascalCase")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ThreatSeverity {
     Low,
     Medium,
@@ -98,6 +100,7 @@ impl std::fmt::Display for ThreatSeverity {
 /// 威胁状态
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "TEXT", rename_all = "PascalCase")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ThreatStatus {
     Active,
     Resolved,
