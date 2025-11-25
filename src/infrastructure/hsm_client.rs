@@ -298,7 +298,8 @@ mod tests {
     #[tokio::test]
     async fn test_derive_ipek_fallback() {
         let client = create_test_client();
-        let ksn = "FFFF000000device1230000";
+        // Valid 24-char hex KSN: FFFF000000 (10 chars) + 6465766963 (10 chars) + 0000 (4 chars) = 24 total
+        let ksn = "FFFF00000064657669630000";
 
         // 由于没有实际的HSM，应该使用本地后备
         let ipek = client.derive_ipek(ksn, "device123").await.unwrap();
@@ -309,7 +310,8 @@ mod tests {
     #[tokio::test]
     async fn test_derive_working_key_fallback() {
         let client = create_test_client();
-        let ksn = "FFFF000000device1230000";
+        // Valid 24-char hex KSN: FFFF000000 (10 chars) + 6465766963 (10 chars) + 0000 (4 chars) = 24 total
+        let ksn = "FFFF00000064657669630000";
 
         let ipek = client.derive_ipek(ksn, "device123").await.unwrap();
         let working_key = client.derive_working_key(&ipek, ksn).await.unwrap();

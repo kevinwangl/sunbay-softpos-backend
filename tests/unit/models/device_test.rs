@@ -1,5 +1,5 @@
 // Unit tests for Device model
-use crate::models::device::{Device, DeviceStatus};
+use crate::models::device::{Device, DeviceStatus, TeeType, DeviceMode};
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -10,49 +10,67 @@ mod device_tests {
     #[test]
     fn test_device_creation() {
         let device = Device {
-            id: Uuid::new_v4(),
-            device_id: "TEST-DEVICE-001".to_string(),
-            device_name: "Test Device".to_string(),
-            device_type: "Android".to_string(),
+            id: Uuid::new_v4().to_string(),
+            imei: "123456789012345".to_string(),
+            model: "V2PRO".to_string(),
             os_version: "12.0".to_string(),
-            app_version: "1.0.0".to_string(),
-            status: DeviceStatus::Pending,
+            tee_type: TeeType::TrustZone.as_str().to_string(),
+            device_mode: DeviceMode::FullPos.as_str().to_string(),
+            public_key: vec![1, 2, 3],
+            status: DeviceStatus::Pending.as_str().to_string(),
+            merchant_id: None,
+            merchant_name: None,
             security_score: 85,
-            last_heartbeat: Some(Utc::now()),
-            registered_at: Utc::now(),
+            current_ksn: "".to_string(),
+            ipek_injected_at: None,
+            key_remaining_count: 0,
+            key_total_count: 0,
+            registered_at: Utc::now().to_rfc3339(),
             approved_at: None,
             approved_by: None,
+            last_active_at: None,
+            updated_at: Utc::now().to_rfc3339(),
         };
 
-        assert_eq!(device.device_id, "TEST-DEVICE-001");
-        assert_eq!(device.status, DeviceStatus::Pending);
+        assert_eq!(device.imei, "123456789012345");
+        assert_eq!(device.status, DeviceStatus::Pending.as_str());
         assert_eq!(device.security_score, 85);
     }
 
     #[test]
     fn test_device_status_transitions() {
         let mut device = Device {
-            id: Uuid::new_v4(),
-            device_id: "TEST-DEVICE-002".to_string(),
-            device_name: "Test Device 2".to_string(),
-            device_type: "iOS".to_string(),
-            os_version: "15.0".to_string(),
-            app_version: "1.0.0".to_string(),
-            status: DeviceStatus::Pending,
-            security_score: 90,
-            last_heartbeat: None,
-            registered_at: Utc::now(),
+            id: Uuid::new_v4().to_string(),
+            imei: "123456789012345".to_string(),
+            model: "V2PRO".to_string(),
+            os_version: "1.0.0".to_string(),
+            tee_type: TeeType::TrustZone.as_str().to_string(),
+            device_mode: DeviceMode::FullPos.as_str().to_string(),
+            public_key: vec![1, 2, 3],
+            status: DeviceStatus::Pending.as_str().to_string(),
+            merchant_id: None,
+            merchant_name: None,
+            security_score: 100,
+            current_ksn: "".to_string(),
+            ipek_injected_at: None,
+            key_remaining_count: 0,
+            key_total_count: 0,
+            registered_at: Utc::now().to_rfc3339(),
             approved_at: None,
             approved_by: None,
+            last_active_at: None,
+            updated_at: Utc::now().to_rfc3339(),
         };
 
-        // Test status transition from Pending to Active
-        device.status = DeviceStatus::Active;
-        assert_eq!(device.status, DeviceStatus::Active);
+        assert_eq!(device.status, DeviceStatus::Pending.as_str());
 
-        // Test status transition to Suspended
-        device.status = DeviceStatus::Suspended;
-        assert_eq!(device.status, DeviceStatus::Suspended);
+        // Change status
+        device.status = DeviceStatus::Active.as_str().to_string();
+        assert_eq!(device.status, DeviceStatus::Active.as_str());
+
+        // Change status again
+        device.status = DeviceStatus::Suspended.as_str().to_string();
+        assert_eq!(device.status, DeviceStatus::Suspended.as_str());
     }
 
     #[test]

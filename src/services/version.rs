@@ -381,8 +381,8 @@ pub struct VersionStatistics {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_validate_semantic_version() {
+    #[tokio::test]
+    async fn test_validate_semantic_version() {
         let service = VersionService::new(
             VersionRepository::new(sqlx::SqlitePool::connect("").await.unwrap()),
             DeviceRepository::new(sqlx::SqlitePool::connect("").await.unwrap()),
@@ -398,8 +398,8 @@ mod tests {
         assert!(service.validate_semantic_version("1.a.0").is_err());
     }
 
-    #[test]
-    fn test_compare_versions() {
+    #[tokio::test]
+    async fn test_compare_versions() {
         let service = VersionService::new(
             VersionRepository::new(sqlx::SqlitePool::connect("").await.unwrap()),
             DeviceRepository::new(sqlx::SqlitePool::connect("").await.unwrap()),

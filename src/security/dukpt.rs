@@ -68,19 +68,22 @@ impl DukptKeyDerivation {
     /// 
     /// KSN格式：IIN (5 bytes) + Device ID (5 bytes) + Counter (2 bytes)
     pub fn generate_initial_ksn(&self, device_id: &str) -> Result<String, AppError> {
-        // 简化实现：生成20位十六进制KSN
+        // 简化实现：生成24位十六进制KSN (12 bytes)
         
-        // IIN (Issuer Identification Number) - 5 bytes
+        // IIN (Issuer Identification Number) - 5 bytes = 10 hex chars
         let iin = "FFFF000000"; // 示例IIN
-
-        // Device ID - 取设备ID的前10个字符，不足补0
-        let device_part = format!("{:0<10}", &device_id[..device_id.len().min(10)]);
-
-        // Counter - 初始为0
+        
+        // Device ID - 编码为hex，取前5字节（10个hex字符）
+        let device_bytes = device_id.as_bytes();
+        let device_hex = hex::encode(&device_bytes[..device_bytes.len().min(5)]);
+        // 确保正好10个字符（5字节），不足补0
+        let device_part = format!("{:0<10}", &device_hex[..device_hex.len().min(10)]);
+        
+        // Counter - 初始为0，2字节 = 4 hex chars
         let counter = "0000";
-
+        
         let ksn = format!("{}{}{}", iin, device_part, counter);
-
+        
         Ok(ksn)
     }
 
@@ -88,13 +91,16 @@ impl DukptKeyDerivation {
     /// 
     /// 每次使用密钥后，KSN的计数器部分需要递增
     pub fn increment_ksn(&self, current_ksn: &str) -> Result<String, AppError> {
-        if current_ksn.len() != 20 {
-            return Err(AppError::BadRequest("Invalid KSN length".to_string()));
+        if current_ksn.len() != 24 {
+            return Err(AppError::BadRequest(format!(
+                "Invalid KSN length: expected 24, got {}",
+                current_ksn.len()
+            )));
         }
 
-        // 提取计数器部分（最后4位）
-        let prefix = &current_ksn[0..16];
-        let counter_str = &current_ksn[16..20];
+        // 提取计数器部分（最后4位，2字节）
+        let prefix = &current_ksn[0..20];
+        let counter_str = &current_ksn[20..24];
 
         // 解析计数器
         let counter = u16::from_str_radix(counter_str, 16)
@@ -195,16 +201,20 @@ mod tests {
         let service = create_test_service();
         let ksn = service.generate_initial_ksn("device123").unwrap();
 
-        assert_eq!(ksn.len(), 20);
+        assert_eq!(ksn.len(), 24); // 12 bytes = 24 hex chars
         assert!(ksn.ends_with("0000")); // Initial counter is 0
+        // Verify it's valid hex
+        assert!(hex::decode(&ksn).is_ok());
     }
 
     #[test]
     fn test_increment_ksn() {
         let service = create_test_service();
-        let ksn = "FFFF000000device1230000";
+        // Valid 24-char hex KSN: FFFF000000 (10 chars) + 6465766963 (10 chars) + 0000 (4 chars) = 24 total
+        let ksn = "FFFF00000064657669630000";
 
         let new_ksn = service.increment_ksn(ksn).unwrap();
+        assert_eq!(new_ksn.len(), 24);
         assert!(new_ksn.ends_with("0001"));
 
         let new_ksn2 = service.increment_ksn(&new_ksn).unwrap();
@@ -214,7 +224,8 @@ mod tests {
     #[test]
     fn test_derive_ipek() {
         let service = create_test_service();
-        let ksn = "FFFF000000device1230000";
+        // Valid 24-char hex KSN: FFFF000000 (10 chars) + 6465766963 (10 chars) + 0000 (4 chars) = 24 total
+        let ksn = "FFFF00000064657669630000";
 
         let ipek = service.derive_ipek(ksn).unwrap();
         assert_eq!(ipek.len(), 32); // SHA256 produces 32 bytes
@@ -223,7 +234,8 @@ mod tests {
     #[test]
     fn test_derive_working_key() {
         let service = create_test_service();
-        let ksn = "FFFF000000device1230000";
+        // Valid 24-char hex KSN: FFFF000000 (10 chars) + 6465766963 (10 chars) + 0000 (4 chars) = 24 total
+        let ksn = "FFFF00000064657669630000";
 
         let ipek = service.derive_ipek(ksn).unwrap();
         let working_key = service.derive_working_key(&ipek, ksn).unwrap();

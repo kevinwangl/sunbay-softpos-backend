@@ -393,8 +393,8 @@ impl HealthCheckService {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_calculate_security_score() {
+    #[tokio::test]
+    async fn test_calculate_security_score() {
         let service = HealthCheckService::new(
             HealthCheckRepository::new(sqlx::SqlitePool::connect("").await.unwrap()),
             DeviceRepository::new(sqlx::SqlitePool::connect("").await.unwrap()),

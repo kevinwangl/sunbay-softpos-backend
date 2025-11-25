@@ -234,15 +234,34 @@ mod tests {
 
     #[tokio::test]
     async fn test_request_id_middleware() {
-        let request = HttpRequest::new(Body::empty());
+        use axum::{
+            routing::get,
+            Router,
+        };
+        use tower::ServiceExt; // for `oneshot`
 
-        let next = Next::new(|_req: Request| async {
-            Ok::<_, std::convert::Infallible>(
-                (StatusCode::OK, "test").into_response()
-            )
-        });
+        // 定义一个简单的处理函数
+        async fn handler() -> impl IntoResponse {
+            (StatusCode::OK, "test")
+        }
 
-        // Note: This test is simplified and won't actually work without proper setup
-        // In real tests, you'd need to set up a proper Axum test environment
+        // 构建应用并添加中间件
+        let app = Router::new()
+            .route("/", get(handler))
+            .layer(axum::middleware::from_fn(request_id_middleware));
+
+        // 发送请求
+        let request = HttpRequest::builder()
+            .uri("/")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+
+        // 验证响应状态码
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // 验证响应头中包含X-Request-ID
+        assert!(response.headers().contains_key("X-Request-ID"));
     }
 }
