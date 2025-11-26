@@ -170,6 +170,26 @@ impl RejectDeviceRequest {
     }
 }
 
+/// 设备操作请求（暂停、吊销）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceOperationRequest {
+    pub reason: String,
+}
+
+impl DeviceOperationRequest {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.reason.trim().is_empty() {
+            return Err("Reason cannot be empty".to_string());
+        }
+
+        if self.reason.trim().len() < 10 {
+            return Err("Reason must be at least 10 characters".to_string());
+        }
+
+        Ok(())
+    }
+}
+
 /// 交易鉴证请求
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AttestTransactionRequest {

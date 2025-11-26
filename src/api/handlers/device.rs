@@ -10,7 +10,7 @@ use std::sync::Arc;
 use crate::{
     api::{middleware::extract_user_id, AppState},
     dto::{
-        request::{ApproveDeviceRequest, RegisterDeviceRequest, RejectDeviceRequest},
+        request::{ApproveDeviceRequest, DeviceOperationRequest, RegisterDeviceRequest, RejectDeviceRequest},
         response::{DeviceListResponse, DeviceResponse, RegisterDeviceResponse, DeviceStatisticsResponse},
     },
     models::DeviceStatus,
@@ -139,10 +139,21 @@ pub async fn reject_device(
     let operator_id = claims.sub;
 
     // 调用服务层
-    let response = state
+    state
         .device_service
         .reject_device(req)
         .await?;
+
+    #[derive(Serialize)]
+    struct RejectResponse {
+        message: String,
+        device_id: String,
+    }
+
+    let response = RejectResponse {
+        message: "Device rejected successfully".to_string(),
+        device_id,
+    };
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -153,15 +164,20 @@ pub async fn reject_device(
 pub async fn suspend_device(
     State(state): State<Arc<AppState>>,
     Path(device_id): Path<String>,
-    request: axum::extract::Request,
+    Extension(claims): Extension<crate::security::jwt::Claims>,
+    Json(req): Json<DeviceOperationRequest>,
 ) -> Result<impl IntoResponse, AppError> {
+    // 验证请求
+    req.validate()
+        .map_err(|e| AppError::BadRequest(e))?;
+
     // 提取操作员ID
-    let operator_id = extract_user_id(&request)?;
+    let operator_id = claims.sub;
 
     // 调用服务层
     state
         .device_service
-        .suspend_device(&device_id, &operator_id, "Manual suspension")
+        .suspend_device(&device_id, &operator_id, &req.reason)
         .await?;
 
     #[derive(Serialize)]
@@ -215,15 +231,20 @@ pub async fn resume_device(
 pub async fn revoke_device(
     State(state): State<Arc<AppState>>,
     Path(device_id): Path<String>,
-    request: axum::extract::Request,
+    Extension(claims): Extension<crate::security::jwt::Claims>,
+    Json(req): Json<DeviceOperationRequest>,
 ) -> Result<impl IntoResponse, AppError> {
+    // 验证请求
+    req.validate()
+        .map_err(|e| AppError::BadRequest(e))?;
+
     // 提取操作员ID
-    let operator_id = extract_user_id(&request)?;
+    let operator_id = claims.sub;
 
     // 调用服务层
     state
         .device_service
-        .revoke_device(&device_id, &operator_id, "Manual revocation")
+        .revoke_device(&device_id, &operator_id, &req.reason)
         .await?;
 
     #[derive(Serialize)]
