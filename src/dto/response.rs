@@ -154,15 +154,15 @@ pub struct InjectKeyResponse {
 
 /// 密钥状态响应
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct KeyStatusResponse {
     pub device_id: String,
-    pub ksn: String,
-    pub usage_count: i32,
-    pub max_usage: i32,
+    #[serde(rename = "currentKSN")]
+    pub current_ksn: String,
     pub remaining_count: i32,
-    pub needs_update: bool,
-    pub injected_at: String,
-    pub updated_at: Option<String>,
+    pub status: String,
+    pub last_updated: String,
+    pub next_update_required: Option<String>,
 }
 
 /// 密钥更新响应

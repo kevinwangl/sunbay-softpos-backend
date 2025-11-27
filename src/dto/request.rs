@@ -93,6 +93,7 @@ impl HealthCheckRequest {
 
 /// 密钥注入请求
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct InjectKeyRequest {
     pub device_id: String,
 }
@@ -109,6 +110,7 @@ impl InjectKeyRequest {
 
 /// 密钥更新请求
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateKeyRequest {
     pub device_id: String,
 }
@@ -378,5 +380,29 @@ pub struct CreatePushTaskRequest {
     pub version_id: String,
     pub target_devices: Option<Vec<String>>,
     pub filter_model: Option<String>,
+}
+
+/// 威胁上报请求
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReportThreatRequest {
+    pub device_id: String,
+    pub threat_type: crate::models::ThreatType,
+    pub severity: crate::models::ThreatSeverity,
+    pub description: String,
+}
+
+impl ReportThreatRequest {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.device_id.trim().is_empty() {
+            return Err("Device ID cannot be empty".to_string());
+        }
+
+        if self.description.trim().is_empty() {
+            return Err("Description cannot be empty".to_string());
+        }
+
+        Ok(())
+    }
 }
 

@@ -37,6 +37,8 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/auth/verify", post(handlers::verify_token))
         // 设备注册（公开）
         .route("/devices/register", post(handlers::register_device))
+        // 威胁上报（公开，设备端调用）
+        .route("/threats/report", post(handlers::report_threat))
         // WebSocket连接
         .route("/ws", get(websocket_handler));
 

@@ -156,6 +156,36 @@ pub async fn get_device_threat_history(
     Ok((StatusCode::OK, Json(response)))
 }
 
+/// 上报威胁处理器（设备端调用）
+///
+/// POST /api/v1/threats/report
+pub async fn report_threat(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<crate::dto::request::ReportThreatRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    // 验证请求
+    req.validate()?;
+
+    // 调用服务层
+    let threat_response = state
+        .threat_detection_service
+        .report_threat(
+            &req.device_id,
+            req.threat_type,
+            req.severity,
+            req.description,
+        )
+        .await?;
+
+    let wrapped_response = serde_json::json!({
+        "code": 200,
+        "message": "Threat reported successfully",
+        "data": threat_response
+    });
+
+    Ok((StatusCode::OK, Json(wrapped_response)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

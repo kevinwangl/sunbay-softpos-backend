@@ -214,25 +214,37 @@ impl KeyManagementService {
             .ok_or_else(|| AppError::NotFound("Device not found".to_string()))?;
 
         // 检查是否已注入密钥
-        let injected_at = device.ipek_injected_at.ok_or_else(|| {
-            AppError::BadRequest("Key has not been injected for this device".to_string())
-        })?;
+        if device.ipek_injected_at.is_none() {
+            return Ok(KeyStatusResponse {
+                device_id: device_id.to_string(),
+                current_ksn: "".to_string(),
+                remaining_count: 0,
+                status: "INACTIVE".to_string(),
+                last_updated: device.updated_at,
+                next_update_required: None,
+            });
+        }
 
-        let ksn = device.current_ksn.clone();
+        let current_ksn = device.current_ksn.clone();
         let max_usage = device.key_total_count;
         let remaining_count = device.key_remaining_count;
-        let usage_count = max_usage - remaining_count;
-        let needs_update = remaining_count < (max_usage / 10); // 剩余不足10%时需要更新
+        
+        // Determine status
+        let status = if remaining_count <= 0 {
+            "EXPIRED".to_string()
+        } else if remaining_count < (max_usage / 10) {
+            "NEAR_EXPIRY".to_string()
+        } else {
+            "ACTIVE".to_string()
+        };
 
         Ok(KeyStatusResponse {
             device_id: device_id.to_string(),
-            ksn,
-            usage_count,
-            max_usage,
+            current_ksn,
             remaining_count,
-            needs_update,
-            injected_at,
-            updated_at: Some(device.updated_at),
+            status,
+            last_updated: device.updated_at,
+            next_update_required: None,
         })
     }
 
@@ -314,7 +326,7 @@ impl KeyManagementService {
     /// 检查密钥是否需要更新
     pub async fn check_key_update_needed(&self, device_id: &str) -> Result<bool, AppError> {
         let key_status = self.get_key_status(device_id).await?;
-        Ok(key_status.needs_update)
+        Ok(key_status.status == "NEAR_EXPIRY" || key_status.status == "EXPIRED")
     }
 
     /// 批量检查需要更新密钥的设备

@@ -234,6 +234,70 @@ impl ThreatDetectionService {
         Ok(threat_responses)
     }
 
+    /// 上报威胁（由设备端调用）
+    pub async fn report_threat(
+        &self,
+        device_id: &str,
+        threat_type: ThreatType,
+        severity: ThreatSeverity,
+        description: String,
+    ) -> Result<ThreatResponse, AppError> {
+        tracing::info!("Device {} reporting threat: {:?}", device_id, threat_type);
+
+        // 验证设备是否存在
+        let device = self
+            .device_repo
+            .find_by_id(device_id)
+            .await?
+            .ok_or_else(|| AppError::DeviceNotFound)?;
+
+        // 创建威胁事件
+        let threat = ThreatEvent::new(
+            device_id.to_string(),
+            threat_type,
+            severity,
+            description,
+        );
+
+        // 保存威胁事件
+        self.threat_repo.create(&threat).await?;
+
+        // 评估威胁并采取行动
+        let action = self.assess_threat_severity(&threat).await?;
+
+        match action {
+            ThreatAction::Suspend => {
+                self.device_repo
+                    .update_status(device_id, DeviceStatus::Suspended, Some("system"))
+                    .await?;
+                tracing::warn!("Device {} suspended due to reported threat", device_id);
+            }
+            ThreatAction::Revoke => {
+                self.device_repo
+                    .update_status(device_id, DeviceStatus::Revoked, Some("system"))
+                    .await?;
+                tracing::error!("Device {} revoked due to reported threat", device_id);
+            }
+            _ => {}
+        }
+
+        // 记录审计日志
+        let audit_log = AuditLog::new(
+            "THREAT_REPORTED".to_string(),
+            device_id.to_string(),
+            OperationResult::Success,
+        )
+        .with_device_id(device_id.to_string())
+        .with_details(format!(
+            "Threat reported by device: type={:?}, severity={:?}",
+            threat_type, severity
+        ));
+
+        self.audit_repo.create(&audit_log).await?;
+
+        Ok(ThreatResponse::from(threat))
+    }
+
     /// 批量解决威胁
     pub async fn bulk_resolve_threats(
         &self,
