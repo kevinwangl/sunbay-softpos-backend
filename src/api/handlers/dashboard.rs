@@ -69,19 +69,39 @@ pub async fn get_health_overview(
         },
     ];
     
-    // 构建最近异常设备 (Mock数据)
-    let recent_abnormal_devices = if abnormal_devices > 0 {
-        vec![
+    
+    // 获取最近异常设备 (真实数据)
+    // 查询所有设备，然后过滤出异常设备
+    let all_devices_response = state.device_service.list_devices(
+        None, // status filter
+        None, // merchant_id filter  
+        50,   // limit - 获取更多设备以便过滤
+        0,    // offset
+    ).await?;
+    
+    // 过滤出异常设备：安全评分 < 60 或状态为 Suspended/Revoked
+    let mut abnormal_device_list: Vec<AbnormalDevice> = all_devices_response.devices
+        .into_iter()
+        .filter(|device| {
+            use crate::models::DeviceStatus;
+            device.security_score < 60 || 
+            matches!(device.status, DeviceStatus::Suspended | DeviceStatus::Revoked)
+        })
+        .take(10) // 最多10个
+        .map(|device| {
             AbnormalDevice {
-                id: "dev_mock_001".to_string(),
-                merchant_name: "Mock Merchant".to_string(),
-                security_score: 45,
-                last_check_at: chrono::Utc::now().to_rfc3339(),
+                id: device.id,
+                merchant_name: "未分配商户".to_string(), // TODO: 从device model添加merchant_name字段
+                security_score: device.security_score,
+                last_check_at: device.registered_at, // 使用registered_at作为最后检查时间的近似值
             }
-        ]
-    } else {
-        vec![]
-    };
+        })
+        .collect();
+    
+    // 按安全评分排序，最低的在前
+    abnormal_device_list.sort_by(|a, b| a.security_score.cmp(&b.security_score));
+    
+    let recent_abnormal_devices = abnormal_device_list;
 
     let response_data = DashboardHealthOverviewResponse {
         total_devices,

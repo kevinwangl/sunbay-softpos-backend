@@ -1,11 +1,13 @@
 use crate::{
     dto::{
-        HealthCheckRequest, HealthCheckResponse, HealthCheckListResponse,
-        HealthOverviewResponse,
+        HealthCheckListResponse, HealthCheckRequest, HealthCheckResponse, HealthOverviewResponse,
     },
-    models::{HealthCheck, RecommendedAction, ThreatEvent, ThreatType, ThreatSeverity, DeviceStatus},
-    repositories::{HealthCheckRepository, DeviceRepository, ThreatRepository, AuditLogRepository},
+    models::{
+        DeviceStatus, HealthCheck, RecommendedAction, ThreatEvent, ThreatSeverity, ThreatType,
+    },
+    repositories::{AuditLogRepository, DeviceRepository, HealthCheckRepository, ThreatRepository},
     security::crypto,
+    services::ThreatDetectionService,
     utils::error::AppError,
 };
 
@@ -16,6 +18,7 @@ pub struct HealthCheckService {
     device_repo: DeviceRepository,
     threat_repo: ThreatRepository,
     audit_repo: AuditLogRepository,
+    threat_detection_service: ThreatDetectionService,
 }
 
 impl HealthCheckService {
@@ -25,12 +28,14 @@ impl HealthCheckService {
         device_repo: DeviceRepository,
         threat_repo: ThreatRepository,
         audit_repo: AuditLogRepository,
+        threat_detection_service: ThreatDetectionService,
     ) -> Self {
         Self {
             health_check_repo,
             device_repo,
             threat_repo,
             audit_repo,
+            threat_detection_service,
         }
     }
 
@@ -72,10 +77,10 @@ impl HealthCheckService {
             request.device_id.clone(),
             security_score,
             request.root_detection,
-            true, // bootloader_status
-            !request.tampering_detection, // system_integrity
+            true,                                                   // bootloader_status
+            !request.tampering_detection,                           // system_integrity
             !request.hook_detection && !request.debugger_detection, // app_integrity
-            !request.emulator_detection, // tee_status
+            !request.emulator_detection,                            // tee_status
         );
 
         // 保存健康检查记录
@@ -86,12 +91,27 @@ impl HealthCheckService {
             .update_security_score(&request.device_id, security_score)
             .await?;
 
-        // 检测威胁
-        let threats = self.detect_threats(&health_check).await?;
+        // 检测威胁类型
+        let detected_threat_types = self.detect_threat_types(&health_check);
 
-        // 处理威胁
-        if !threats.is_empty() {
-            self.handle_threats(&request.device_id, &threats).await?;
+        // 【新逻辑】使用基于评分的威胁处理
+        self.threat_detection_service
+            .handle_health_check_threats(
+                &request.device_id,
+                security_score,
+                detected_threat_types.clone(),
+            )
+            .await?;
+
+        // 【新增】检查是否可以自动恢复设备
+        let auto_recovered = self
+            .threat_detection_service
+            .check_auto_recovery(&request.device_id, security_score)
+            .await
+            .unwrap_or(false);
+
+        if auto_recovered {
+            tracing::info!("Device {} auto-recovered after health check", request.device_id);
         }
 
         tracing::info!(
@@ -100,13 +120,14 @@ impl HealthCheckService {
             security_score
         );
 
-        let threat_descriptions: Vec<String> = threats.iter().map(|t| t.description.clone()).collect();
+        let threat_descriptions: Vec<String> =
+            detected_threat_types.iter().map(|t| format!("{:?}", t)).collect();
 
         Ok(HealthCheckResponse {
             check_id: health_check.id,
             device_id: request.device_id,
             security_score,
-            recommended_action: health_check.recommended_action.to_string(),
+            recommended_action: self.get_recommended_action(security_score),
             threats_detected: threat_descriptions,
             checked_at: chrono::Utc::now().to_rfc3339(),
         })
@@ -181,8 +202,55 @@ impl HealthCheckService {
         score.max(0)
     }
 
-    /// 检测威胁
-    async fn detect_threats(&self, health_check: &HealthCheck) -> Result<Vec<ThreatEvent>, AppError> {
+    /// 检测威胁类型（新方法，只返回威胁类型）
+    fn detect_threat_types(&self, health_check: &HealthCheck) -> Vec<ThreatType> {
+        let mut threat_types = Vec::new();
+
+        // Root检测
+        if health_check.root_status {
+            threat_types.push(ThreatType::RootDetection);
+        }
+
+        // Bootloader解锁
+        if !health_check.bootloader_status {
+            threat_types.push(ThreatType::BootloaderUnlock);
+        }
+
+        // 系统篡改
+        if !health_check.system_integrity {
+            threat_types.push(ThreatType::SystemTamper);
+        }
+
+        // 应用篡改
+        if !health_check.app_integrity {
+            threat_types.push(ThreatType::AppTamper);
+        }
+
+        // TEE妥协
+        if !health_check.tee_status {
+            threat_types.push(ThreatType::TeeCompromise);
+        }
+
+        threat_types
+    }
+
+    /// 获取推荐动作（新方法）
+    fn get_recommended_action(&self, score: i32) -> String {
+        match score {
+            0..=39 => "设备已吊销，需要重新审批".to_string(),
+            40..=59 => "设备已暂停，请排查安全问题".to_string(),
+            60..=89 => "建议关注设备安全状态".to_string(),
+            90..=100 => "设备安全状态良好".to_string(),
+            _ => "评分异常".to_string(),
+        }
+    }
+
+    /// 检测威胁（已废弃，使用 detect_threat_types）
+    #[allow(dead_code)]
+    async fn detect_threats(
+        &self,
+        health_check: &HealthCheck,
+    ) -> Result<Vec<ThreatEvent>, AppError> {
         let mut threats = Vec::new();
 
         // Root检测
@@ -282,14 +350,18 @@ impl HealthCheckService {
                         .await?;
 
                     tracing::warn!("Device {} suspended due to critical threat", device_id);
-                }
+                },
                 ThreatSeverity::High => {
                     // 记录警告，但不自动暂停
                     tracing::warn!("High severity threat detected on device {}", device_id);
-                }
+                },
                 _ => {
-                    tracing::info!("Threat detected on device {}: {:?}", device_id, threat.threat_type);
-                }
+                    tracing::info!(
+                        "Threat detected on device {}: {:?}",
+                        device_id,
+                        threat.threat_type
+                    );
+                },
             }
         }
 
@@ -338,9 +410,7 @@ impl HealthCheckService {
         };
 
         let total = if device_id.is_some() {
-            self.health_check_repo
-                .count_by_device(device_id.unwrap())
-                .await?
+            self.health_check_repo.count_by_device(device_id.unwrap()).await?
         } else {
             0
         };
@@ -357,21 +427,18 @@ impl HealthCheckService {
             })
             .collect();
 
-        Ok(HealthCheckListResponse {
-            checks: check_responses,
-            total,
-        })
+        Ok(HealthCheckListResponse { checks: check_responses, total })
     }
 
     /// 获取健康概览
-    pub async fn get_health_overview(&self, device_id: &str) -> Result<HealthOverviewResponse, AppError> {
+    pub async fn get_health_overview(
+        &self,
+        device_id: &str,
+    ) -> Result<HealthOverviewResponse, AppError> {
         tracing::debug!("Getting health overview for device: {}", device_id);
 
         // 获取最新的健康检查
-        let latest_check = self
-            .health_check_repo
-            .get_latest_by_device(device_id)
-            .await?;
+        let latest_check = self.health_check_repo.get_latest_by_device(device_id).await?;
 
         // 获取活跃威胁
         let _active_threats = self.threat_repo.get_active_threats(device_id).await?;
@@ -395,11 +462,24 @@ mod tests {
 
     #[tokio::test]
     async fn test_calculate_security_score() {
+        let pool = sqlx::SqlitePool::connect("").await.unwrap();
+        let health_check_repo = HealthCheckRepository::new(pool.clone());
+        let device_repo = DeviceRepository::new(pool.clone());
+        let threat_repo = ThreatRepository::new(pool.clone());
+        let audit_repo = AuditLogRepository::new(pool.clone());
+        let threat_detection_service = ThreatDetectionService::new(
+            threat_repo.clone(),
+            device_repo.clone(),
+            health_check_repo.clone(),
+            audit_repo.clone(),
+        );
+
         let service = HealthCheckService::new(
-            HealthCheckRepository::new(sqlx::SqlitePool::connect("").await.unwrap()),
-            DeviceRepository::new(sqlx::SqlitePool::connect("").await.unwrap()),
-            ThreatRepository::new(sqlx::SqlitePool::connect("").await.unwrap()),
-            AuditLogRepository::new(sqlx::SqlitePool::connect("").await.unwrap()),
+            health_check_repo,
+            device_repo,
+            threat_repo,
+            audit_repo,
+            threat_detection_service,
         );
 
         // 完美状态

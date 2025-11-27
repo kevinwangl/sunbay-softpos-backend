@@ -43,7 +43,13 @@ pub async fn list_logs(
         )
         .await?;
 
-    Ok((StatusCode::OK, Json(response)))
+    let wrapped_response = serde_json::json!({
+        "code": 200,
+        "message": "Success",
+        "data": response
+    });
+
+    Ok((StatusCode::OK, Json(wrapped_response)))
 }
 
 /// 获取审计日志详情处理器
@@ -56,7 +62,13 @@ pub async fn get_log(
     // 调用服务层
     let response = state.audit_service.get_log(&log_id).await?;
 
-    Ok((StatusCode::OK, Json(response)))
+    let wrapped_response = serde_json::json!({
+        "code": 200,
+        "message": "Success",
+        "data": response
+    });
+
+    Ok((StatusCode::OK, Json(wrapped_response)))
 }
 
 /// 获取设备审计日志处理器
@@ -157,7 +169,7 @@ pub async fn export_logs(
             query.start_time.as_deref(),
             query.end_time.as_deref(),
             10000, // limit
-            0, // offset
+            0,     // offset
         )
         .await?;
 

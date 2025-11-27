@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
 use crate::models::{
-    Device, DeviceMode, DeviceStatus, TeeType, Transaction, TransactionStatus,
-    SdkVersion, AuditLog, OperationResult,
+    AuditLog, Device, DeviceMode, DeviceStatus, OperationResult, SdkVersion, TeeType, Transaction,
+    TransactionStatus,
 };
+use serde::{Deserialize, Serialize};
 
 /// 通用API响应
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -14,19 +14,11 @@ pub struct ApiResponse<T> {
 
 impl<T> ApiResponse<T> {
     pub fn success(data: T) -> Self {
-        Self {
-            success: true,
-            data: Some(data),
-            error: None,
-        }
+        Self { success: true, data: Some(data), error: None }
     }
 
     pub fn error(message: String) -> Self {
-        Self {
-            success: false,
-            data: None,
-            error: Some(message),
-        }
+        Self { success: false, data: None, error: Some(message) }
     }
 }
 
@@ -276,6 +268,7 @@ pub struct AuditLogResponse {
     pub device_id: Option<String>,
     pub result: OperationResult,
     pub details: Option<String>,
+    pub ip_address: Option<String>,
     pub created_at: String,
 }
 
@@ -288,6 +281,7 @@ impl From<AuditLog> for AuditLogResponse {
             device_id: log.device_id,
             result: log.result,
             details: log.details,
+            ip_address: log.ip_address,
             created_at: log.created_at,
         }
     }
@@ -434,4 +428,3 @@ pub struct AbnormalDevice {
     pub security_score: i32,
     pub last_check_at: String,
 }
-

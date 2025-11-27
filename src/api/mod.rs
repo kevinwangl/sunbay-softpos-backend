@@ -72,9 +72,7 @@ impl AppState {
             config.jwt.expiration_hours * 3600,
         ));
 
-        let dukpt = Arc::new(DukptKeyDerivation::new(
-            config.security.bdk.clone().into_bytes(),
-        ));
+        let dukpt = Arc::new(DukptKeyDerivation::new(config.security.bdk.clone().into_bytes()));
 
         // 初始化Repositories
         let device_repo = DeviceRepository::new(db_pool.clone());
@@ -109,18 +107,19 @@ impl AppState {
 
         let audit_service = Arc::new(AuditService::new(audit_repo.clone()));
 
-        let health_check_service = Arc::new(HealthCheckService::new(
-            health_check_repo.clone(),
-            device_repo.clone(),
-            threat_repo.clone(),
-            audit_repo.clone(),
-        ));
-
         let threat_detection_service = Arc::new(ThreatDetectionService::new(
             threat_repo.clone(),
             device_repo.clone(),
             health_check_repo.clone(),
             audit_repo.clone(),
+        ));
+
+        let health_check_service = Arc::new(HealthCheckService::new(
+            health_check_repo.clone(),
+            device_repo.clone(),
+            threat_repo.clone(),
+            audit_repo.clone(),
+            (*threat_detection_service).clone(),
         ));
 
         let version_service = Arc::new(VersionService::new(
