@@ -31,7 +31,8 @@ pub use pinpad::{
     list_pin_encryption_logs,
 };
 pub use threat::{
-    get_device_threat_history, get_threat, get_threat_statistics, list_threats, resolve_threat,
+    get_device_threat_history, get_threat, get_threat_statistics, list_threats, report_threat,
+    resolve_threat,
 };
 pub use transaction::{
     attest_transaction, get_device_transaction_history, get_transaction,
