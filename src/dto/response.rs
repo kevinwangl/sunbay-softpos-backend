@@ -115,6 +115,7 @@ pub struct UserInfo {
 
 /// 健康检查响应
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct HealthCheckResponse {
     pub check_id: String,
     pub device_id: String,
@@ -122,6 +123,8 @@ pub struct HealthCheckResponse {
     pub recommended_action: String,
     pub threats_detected: Vec<String>,
     pub checked_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_token: Option<crate::models::TransactionToken>,
 }
 
 /// 健康检查概览响应

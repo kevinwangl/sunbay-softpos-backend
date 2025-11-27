@@ -40,7 +40,44 @@ pub async fn submit_health_check(
     let operator_id = claims.sub;
 
     // 调用服务层
-    let response = state.health_check_service.submit_health_check(req, &operator_id).await?;
+    let mut response = state.health_check_service.submit_health_check(req, &operator_id).await?;
+
+    // 如果安全评分合格（>=60），生成交易令牌
+    if response.security_score >= 60 {
+        // 构建HealthCheck对象用于生成令牌
+        let health_check = crate::models::HealthCheck {
+            id: response.check_id.clone(),
+            device_id: device_id.clone(),
+            security_score: response.security_score,
+            root_status: false,
+            bootloader_status: false,
+            system_integrity: false,
+            app_integrity: false,
+            tee_status: false,
+            recommended_action: crate::models::RecommendedAction::None,
+            details: None,
+            created_at: response.checked_at.clone(),
+        };
+
+        match state.transaction_token_service.generate_token(&device_id, &health_check).await {
+            Ok(token) => {
+                response.transaction_token = Some(token);
+                tracing::info!(
+                    "Transaction token generated for device {} with score {}",
+                    device_id,
+                    response.security_score
+                );
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "Failed to generate transaction token for device {}: {}",
+                    device_id,
+                    e
+                );
+                // 不阻塞健康检查响应，只记录警告
+            }
+        }
+    }
 
     // 发送通知（如果安全评分低于60）
     if response.security_score < 60 {

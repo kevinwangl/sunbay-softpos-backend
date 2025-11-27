@@ -39,6 +39,9 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/devices/register", post(handlers::register_device))
         // 威胁上报（公开，设备端调用）
         .route("/threats/report", post(handlers::report_threat))
+        // 交易鉴证和处理（公开，设备端调用）
+        .route("/transactions/attest", post(handlers::attest_transaction_public))
+        .route("/transactions/process", post(handlers::process_transaction_public))
         // WebSocket连接
         .route("/ws", get(websocket_handler));
 
@@ -112,14 +115,14 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             "/threats/device/:device_id/history",
             get(handlers::get_device_threat_history),
         )
-        // 交易管理
+        // 交易管理（管理端）
         .route(
-            "/transactions/attest",
-            post(handlers::attest_transaction),
+            "/transactions/request-token",
+            post(handlers::request_transaction_token),
         )
         .route(
-            "/transactions/process",
-            post(handlers::process_transaction),
+            "/transactions/verify-token",
+            post(handlers::verify_transaction_token),
         )
         .route("/transactions", get(handlers::list_transactions))
         .route(

@@ -1,6 +1,7 @@
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use crate::utils::error::AppError;
+use crate::models::TransactionTokenClaims;
 
 /// JWT Claims
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,6 +128,33 @@ impl JwtService {
     pub fn extract_role(&self, token: &str) -> Result<String, AppError> {
         let claims = self.verify_token(token)?;
         Ok(claims.role)
+    }
+
+    /// 生成交易令牌
+    pub fn generate_transaction_token(
+        &self,
+        claims: &TransactionTokenClaims,
+    ) -> Result<String, AppError> {
+        let token = encode(
+            &Header::default(),
+            claims,
+            &EncodingKey::from_secret(self.secret.as_bytes()),
+        )
+        .map_err(|e| AppError::InternalWithMessage(format!("Failed to generate transaction token: {}", e)))?;
+
+        Ok(token)
+    }
+
+    /// 验证交易令牌
+    pub fn verify_transaction_token(&self, token: &str) -> Result<TransactionTokenClaims, AppError> {
+        let token_data = decode::<TransactionTokenClaims>(
+            token,
+            &DecodingKey::from_secret(self.secret.as_bytes()),
+            &Validation::default(),
+        )
+        .map_err(|e| AppError::Unauthorized(format!("Invalid transaction token: {}", e)))?;
+
+        Ok(token_data.claims)
     }
 }
 

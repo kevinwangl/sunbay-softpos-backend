@@ -35,8 +35,9 @@ pub use threat::{
     resolve_threat,
 };
 pub use transaction::{
-    attest_transaction, get_device_transaction_history, get_transaction,
-    get_transaction_statistics, list_transactions, process_transaction,
+    attest_transaction, attest_transaction_public, get_device_transaction_history, get_transaction,
+    get_transaction_statistics, list_transactions, process_transaction, process_transaction_public,
+    request_transaction_token, verify_transaction_token,
 };
 pub use version::{
     create_push_task, create_version, get_available_version, get_compatibility_matrix,

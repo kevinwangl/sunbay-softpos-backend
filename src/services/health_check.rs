@@ -130,6 +130,7 @@ impl HealthCheckService {
             recommended_action: self.get_recommended_action(security_score),
             threats_detected: threat_descriptions,
             checked_at: chrono::Utc::now().to_rfc3339(),
+            transaction_token: None, // 将在handler层生成
         })
     }
 
@@ -424,6 +425,7 @@ impl HealthCheckService {
                 recommended_action: check.recommended_action.to_string(),
                 threats_detected: Vec::new(), // 需要单独查询
                 checked_at: check.created_at,
+                transaction_token: None, // 历史记录不包含令牌
             })
             .collect();
 

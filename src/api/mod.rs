@@ -12,7 +12,7 @@ use crate::{
     security::{DukptKeyDerivation, JwtService},
     services::{
         AuditService, DeviceService, HealthCheckService, KeyManagementService,
-        ThreatDetectionService, TransactionService, VersionService,
+        ThreatDetectionService, TransactionService, TransactionTokenService, VersionService,
     },
 };
 use redis::Client as RedisClient;
@@ -43,6 +43,7 @@ pub struct AppState {
     pub device_service: Arc<DeviceService>,
     pub key_management_service: Arc<KeyManagementService>,
     pub transaction_service: Arc<TransactionService>,
+    pub transaction_token_service: Arc<TransactionTokenService>,
     pub audit_service: Arc<AuditService>,
     pub health_check_service: Arc<HealthCheckService>,
     pub threat_detection_service: Arc<ThreatDetectionService>,
@@ -128,6 +129,24 @@ impl AppState {
             audit_repo.clone(),
         ));
 
+        // 初始化Redis客户端包装器（用于TransactionTokenService）
+        let redis_wrapper = match crate::infrastructure::redis::RedisClient::new(
+            &crate::infrastructure::redis::RedisConfig {
+                url: config.redis.url.clone(),
+            }
+        ).await {
+            Ok(client) => Some(client),
+            Err(e) => {
+                tracing::warn!("Failed to initialize Redis client: {}", e);
+                None
+            }
+        };
+
+        let transaction_token_service = Arc::new(TransactionTokenService::new(
+            jwt_service.clone(),
+            redis_wrapper,
+        ));
+
         // 初始化WebSocket连接池和通知服务
         let ws_pool = websocket::create_connection_pool();
         let notification_service = Arc::new(NotificationService::new(ws_pool.clone()));
@@ -146,6 +165,7 @@ impl AppState {
             device_service,
             key_management_service,
             transaction_service,
+            transaction_token_service,
             audit_service,
             health_check_service,
             threat_detection_service,
