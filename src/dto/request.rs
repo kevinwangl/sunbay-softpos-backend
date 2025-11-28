@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::models::{DeviceMode, TeeType, TransactionType, UpdateType};
+use serde::{Deserialize, Serialize};
 
 /// 设备注册请求
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,6 +11,8 @@ pub struct RegisterDeviceRequest {
     pub public_key: String,
     #[serde(default = "default_device_mode")]
     pub device_mode: DeviceMode,
+    #[serde(default)]
+    pub nfc_present: bool,
 }
 
 fn default_device_mode() -> DeviceMode {
@@ -405,4 +407,3 @@ impl ReportThreatRequest {
         Ok(())
     }
 }
-

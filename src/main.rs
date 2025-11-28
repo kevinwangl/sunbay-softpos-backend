@@ -29,10 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Server listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(
-        listener,
-        app.into_make_service_with_connect_info::<SocketAddr>()
-    ).await?;
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await?;
 
     Ok(())
 }
@@ -42,11 +39,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /// 初始化日志
 fn init_tracing() {
+    use sunbay_softpos_backend::infrastructure::SqlxLogLayer;
+    use tracing_subscriber::fmt::format::FmtSpan;
+    use tracing_subscriber::Layer;
+
+    // 应用层日志Filter：显示应用日志，但过滤掉SQLx日志
+    // 我们需要确保即使设置了RUST_LOG，也强制禁用sqlx
+    let env_log = std::env::var("RUST_LOG")
+        .unwrap_or_else(|_| "sunbay_softpos_backend=info,tower_http=info".to_string());
+    // 使用更具体的 sqlx::query=off 来确保屏蔽查询日志
+    let app_filter =
+        tracing_subscriber::EnvFilter::new(format!("{},sqlx=off,sqlx::query=off", env_log));
+
+    // SQLx日志Filter：允许SQLx的Debug日志通过（因为SQLx通常在Debug级别记录查询）
+    let sqlx_filter = tracing_subscriber::EnvFilter::new("sqlx::query=debug");
+
     tracing_subscriber::registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "sunbay_softpos_backend=debug,tower_http=debug".into()),
+            tracing_subscriber::fmt::layer()
+                .with_target(false)
+                .with_thread_ids(false)
+                .with_thread_names(false)
+                .with_file(false)
+                .with_line_number(false)
+                .with_level(true)
+                .with_ansi(true)
+                .with_span_events(FmtSpan::NONE)
+                .pretty()
+                .with_filter(app_filter),
         )
-        .with(tracing_subscriber::fmt::layer())
+        .with(SqlxLogLayer.with_filter(sqlx_filter))
         .init();
 }

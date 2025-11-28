@@ -1,6 +1,6 @@
-use sqlx::SqlitePool;
 use crate::models::{Device, DeviceStatus};
 use crate::utils::error::AppError;
+use sqlx::SqlitePool;
 
 /// 设备Repository
 #[derive(Clone)]
@@ -20,9 +20,9 @@ impl DeviceRepository {
             r#"
             INSERT INTO devices (
                 id, imei, model, os_version, tee_type, device_mode, public_key,
-                status, security_score, current_ksn, registered_at
+                status, security_score, current_ksn, registered_at, nfc_present
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             device.id,
             device.imei,
@@ -35,6 +35,7 @@ impl DeviceRepository {
             device.security_score,
             device.current_ksn,
             device.registered_at,
+            device.nfc_present,
         )
         .execute(&self.pool)
         .await?;
@@ -54,7 +55,8 @@ impl DeviceRepository {
                 current_ksn, ipek_injected_at, 
                 key_remaining_count as "key_remaining_count: i32", 
                 key_total_count as "key_total_count: i32",
-                registered_at, approved_at, approved_by, last_active_at, updated_at
+                registered_at, approved_at, approved_by, last_active_at, updated_at,
+                nfc_present
             FROM devices
             WHERE id = ?
             "#,
@@ -98,7 +100,8 @@ impl DeviceRepository {
                 current_ksn, ipek_injected_at,
                 key_remaining_count, key_total_count,
                 registered_at, approved_at, approved_by,
-                last_active_at, updated_at
+                last_active_at, updated_at,
+                nfc_present
             FROM devices
             WHERE 1=1
             "#,
@@ -121,9 +124,7 @@ impl DeviceRepository {
         query.push_str(" ORDER BY registered_at DESC");
         query.push_str(&format!(" LIMIT {} OFFSET {}", limit, offset));
 
-        let devices = sqlx::query_as::<_, Device>(&query)
-            .fetch_all(&self.pool)
-            .await?;
+        let devices = sqlx::query_as::<_, Device>(&query).fetch_all(&self.pool).await?;
 
         Ok(devices)
     }
@@ -147,9 +148,7 @@ impl DeviceRepository {
             ));
         }
 
-        let result = sqlx::query_scalar::<_, i64>(&query)
-            .fetch_one(&self.pool)
-            .await?;
+        let result = sqlx::query_scalar::<_, i64>(&query).fetch_one(&self.pool).await?;
 
         Ok(result)
     }
@@ -164,9 +163,9 @@ impl DeviceRepository {
         let now = chrono::Utc::now().to_rfc3339();
 
         let status_str = status.as_str();
-        
+
         let status_upper = status_str.to_uppercase();
-        
+
         if status == DeviceStatus::Active {
             // 审批通过
             sqlx::query!(
@@ -289,29 +288,25 @@ impl DeviceRepository {
             .fetch_one(&self.pool)
             .await?;
 
-        let active = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM devices WHERE status = 'ACTIVE'",
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        let active =
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM devices WHERE status = 'ACTIVE'")
+                .fetch_one(&self.pool)
+                .await?;
 
-        let pending = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM devices WHERE status = 'PENDING'",
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        let pending =
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM devices WHERE status = 'PENDING'")
+                .fetch_one(&self.pool)
+                .await?;
 
-        let suspended = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM devices WHERE status = 'SUSPENDED'",
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        let suspended =
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM devices WHERE status = 'SUSPENDED'")
+                .fetch_one(&self.pool)
+                .await?;
 
-        let revoked = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM devices WHERE status = 'REVOKED'",
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        let revoked =
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM devices WHERE status = 'REVOKED'")
+                .fetch_one(&self.pool)
+                .await?;
 
         let avg_score = sqlx::query_scalar::<_, f64>(
             "SELECT AVG(security_score) FROM devices WHERE status = 'ACTIVE'",

@@ -1,12 +1,12 @@
 use crate::{
     dto::{
-        RegisterDeviceRequest, RegisterDeviceResponse, DeviceResponse, DeviceListResponse,
-        ApproveDeviceRequest, RejectDeviceRequest,
+        ApproveDeviceRequest, DeviceListResponse, DeviceResponse, RegisterDeviceRequest,
+        RegisterDeviceResponse, RejectDeviceRequest,
     },
-    models::{Device, DeviceStatus, AuditLog, OperationResult},
-    repositories::{DeviceRepository, AuditLogRepository},
-    security::DukptKeyDerivation,
     infrastructure::HsmClient,
+    models::{AuditLog, Device, DeviceStatus, OperationResult},
+    repositories::{AuditLogRepository, DeviceRepository},
+    security::DukptKeyDerivation,
     utils::error::AppError,
 };
 
@@ -27,12 +27,7 @@ impl DeviceService {
         dukpt: DukptKeyDerivation,
         hsm_client: Option<HsmClient>,
     ) -> Self {
-        Self {
-            device_repo,
-            audit_repo,
-            dukpt,
-            hsm_client,
-        }
+        Self { device_repo, audit_repo, dukpt, hsm_client }
     }
 
     /// 注册设备
@@ -62,6 +57,7 @@ impl DeviceService {
             request.tee_type,
             request.public_key.into_bytes(),
             request.device_mode,
+            request.nfc_present,
         );
 
         // 更新设备的KSN
@@ -77,10 +73,7 @@ impl DeviceService {
             OperationResult::Success,
         )
         .with_device_id(device.id.clone())
-        .with_details(format!(
-            "Device registered: IMEI={}, Model={}",
-            request.imei, device.model
-        ));
+        .with_details(format!("Device registered: IMEI={}, Model={}", request.imei, device.model));
 
         self.audit_repo.create(&audit_log).await?;
 
@@ -95,10 +88,7 @@ impl DeviceService {
     }
 
     /// 审批设备
-    pub async fn approve_device(
-        &self,
-        request: ApproveDeviceRequest,
-    ) -> Result<(), AppError> {
+    pub async fn approve_device(&self, request: ApproveDeviceRequest) -> Result<(), AppError> {
         tracing::info!("Approving device: {}", request.device_id);
 
         // 验证请求
@@ -113,9 +103,7 @@ impl DeviceService {
 
         // 检查设备状态
         if device.status != DeviceStatus::Pending.as_str() {
-            return Err(AppError::BadRequest(
-                "Device is not in pending status".to_string(),
-            ));
+            return Err(AppError::BadRequest("Device is not in pending status".to_string()));
         }
 
         // 更新设备状态为Active
@@ -140,10 +128,7 @@ impl DeviceService {
     }
 
     /// 拒绝设备
-    pub async fn reject_device(
-        &self,
-        request: RejectDeviceRequest,
-    ) -> Result<(), AppError> {
+    pub async fn reject_device(&self, request: RejectDeviceRequest) -> Result<(), AppError> {
         tracing::info!("Rejecting device: {}", request.device_id);
 
         // 验证请求
@@ -158,9 +143,7 @@ impl DeviceService {
 
         // 检查设备状态
         if device.status != DeviceStatus::Pending.as_str() {
-            return Err(AppError::BadRequest(
-                "Device is not in pending status".to_string(),
-            ));
+            return Err(AppError::BadRequest("Device is not in pending status".to_string()));
         }
 
         // 更新设备状态为Revoked
@@ -207,25 +190,14 @@ impl DeviceService {
     ) -> Result<DeviceListResponse, AppError> {
         tracing::debug!("Listing devices with limit: {}, offset: {}", limit, offset);
 
-        let devices = self
-            .device_repo
-            .list(status, search, limit, offset)
-            .await?;
+        let devices = self.device_repo.list(status, search, limit, offset).await?;
 
-        let total = self
-            .device_repo
-            .count(status, search)
-            .await?;
+        let total = self.device_repo.count(status, search).await?;
 
-        let device_responses: Vec<DeviceResponse> = devices
-            .into_iter()
-            .map(DeviceResponse::from)
-            .collect();
+        let device_responses: Vec<DeviceResponse> =
+            devices.into_iter().map(DeviceResponse::from).collect();
 
-        Ok(DeviceListResponse {
-            devices: device_responses,
-            total,
-        })
+        Ok(DeviceListResponse { devices: device_responses, total })
     }
 
     /// 暂停设备
@@ -245,9 +217,7 @@ impl DeviceService {
             .ok_or_else(|| AppError::NotFound("Device not found".to_string()))?;
 
         if device.status != DeviceStatus::Active.as_str() {
-            return Err(AppError::BadRequest(
-                "Device is not in active status".to_string(),
-            ));
+            return Err(AppError::BadRequest("Device is not in active status".to_string()));
         }
 
         // 更新设备状态为Suspended
@@ -272,11 +242,7 @@ impl DeviceService {
     }
 
     /// 恢复设备
-    pub async fn resume_device(
-        &self,
-        device_id: &str,
-        operator: &str,
-    ) -> Result<(), AppError> {
+    pub async fn resume_device(&self, device_id: &str, operator: &str) -> Result<(), AppError> {
         tracing::info!("Resuming device: {}", device_id);
 
         // 检查设备是否存在且为Suspended状态
@@ -287,9 +253,7 @@ impl DeviceService {
             .ok_or_else(|| AppError::NotFound("Device not found".to_string()))?;
 
         if device.status != DeviceStatus::Suspended.as_str() {
-            return Err(AppError::BadRequest(
-                "Device is not in suspended status".to_string(),
-            ));
+            return Err(AppError::BadRequest("Device is not in suspended status".to_string()));
         }
 
         // 更新设备状态为Active
@@ -330,9 +294,8 @@ impl DeviceService {
             .ok_or_else(|| AppError::NotFound("Device not found".to_string()))?;
 
         // 只有Active或Suspended状态的设备可以被吊销
-        let current_status = DeviceStatus::from_str(&device.status).ok_or_else(|| {
-            AppError::Internal
-        })?;
+        let current_status =
+            DeviceStatus::from_str(&device.status).ok_or_else(|| AppError::Internal)?;
 
         if !matches!(current_status, DeviceStatus::Active | DeviceStatus::Suspended) {
             return Err(AppError::BadRequest(
@@ -385,9 +348,7 @@ impl DeviceService {
             .ok_or_else(|| AppError::NotFound("Device not found".to_string()))?;
 
         // 更新安全评分
-        self.device_repo
-            .update_security_score(device_id, score)
-            .await?;
+        self.device_repo.update_security_score(device_id, score).await?;
 
         // 记录审计日志
         let audit_log = AuditLog::new(
@@ -409,7 +370,9 @@ impl DeviceService {
     }
 
     /// 获取设备统计信息
-    pub async fn get_device_statistics(&self) -> Result<crate::repositories::DeviceStatistics, AppError> {
+    pub async fn get_device_statistics(
+        &self,
+    ) -> Result<crate::repositories::DeviceStatistics, AppError> {
         tracing::debug!("Getting device statistics");
         let stats = self.device_repo.get_statistics().await?;
         Ok(stats)

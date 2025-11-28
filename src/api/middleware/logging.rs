@@ -1,16 +1,14 @@
 use axum::{
-    body::Body,
     extract::{ConnectInfo, Request},
-    http::StatusCode,
     middleware::Next,
-    response::{IntoResponse, Response},
+    response::Response,
 };
 use std::{net::SocketAddr, time::Instant};
 use tracing::{info, warn};
 
 /// 请求日志中间件
 ///
-/// 记录每个HTTP请求的详细信息
+/// 记录每个HTTP请求的详细信息，分离请求和响应日志
 pub async fn logging_middleware(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     request: Request,
@@ -18,7 +16,7 @@ pub async fn logging_middleware(
 ) -> Response {
     let method = request.method().clone();
     let uri = request.uri().clone();
-    let version = request.version();
+    let request_id = uuid::Uuid::new_v4();
 
     // 提取用户信息（如果已认证）
     let user_id = request
@@ -26,17 +24,79 @@ pub async fn logging_middleware(
         .get::<crate::security::jwt::Claims>()
         .map(|claims| claims.sub.clone());
 
+    // 提取MatchedPath（路由模板）
+    let matched_path = request
+        .extensions()
+        .get::<axum::extract::MatchedPath>()
+        .map(|path| path.as_str().to_string())
+        .unwrap_or_else(|| uri.path().to_string());
+
+    let user_display = user_id.as_ref().map(|id| id.as_str()).unwrap_or("anonymous");
+
     // 记录请求开始
     let start = Instant::now();
+    let start_time = chrono::Local::now();
 
-    info!(
-        method = %method,
-        uri = %uri,
-        version = ?version,
-        client_ip = %addr.ip(),
-        user_id = ?user_id,
-        "Incoming request"
+    // 捕获请求体
+    let (parts, body) = request.into_parts();
+    let bytes = match axum::body::to_bytes(body, usize::MAX).await {
+        Ok(bytes) => bytes,
+        Err(err) => {
+            warn!("Failed to read request body: {}", err);
+            return Response::builder()
+                .status(400)
+                .body(axum::body::Body::from("Failed to read request body"))
+                .unwrap();
+        },
+    };
+
+    // 尝试将请求体解析为 JSON 字符串以便打印
+    let body_str = if !bytes.is_empty() {
+        match std::str::from_utf8(&bytes) {
+            Ok(s) => {
+                // 尝试格式化 JSON
+                if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(s) {
+                    serde_json::to_string_pretty(&json_value).unwrap_or_else(|_| s.to_string())
+                } else {
+                    s.to_string()
+                }
+            },
+            Err(_) => format!("<binary data, {} bytes>", bytes.len()),
+        }
+    } else {
+        String::from("<empty>")
+    };
+
+    // 构建Header
+    let header = format!(
+        "#################{} {}###########",
+        start_time.format("%Y-%m-%dT%H:%M:%S%.6f"),
+        uri.path()
     );
+
+    let request_log = format!(
+        "\n{}\n\
+         ┌─ 📥 INCOMING REQUEST\n\
+         │  Method: {} {}\n\
+         │  Handler: {}\n\
+         │  Client: {} | User: {}\n\
+         │  Request ID: {}\n\
+         │  Body:\n{}\n\
+         └─ Processing...",
+        header,
+        method,
+        uri,
+        matched_path,
+        addr.ip(),
+        user_display,
+        request_id,
+        indent_body(&body_str)
+    );
+
+    info!("{}", request_log);
+
+    // 重建请求
+    let request = Request::from_parts(parts, axum::body::Body::from(bytes));
 
     // 处理请求
     let response = next.run(request).await;
@@ -45,37 +105,49 @@ pub async fn logging_middleware(
     let duration = start.elapsed();
     let status = response.status();
 
+    // 根据状态码选择日志级别和状态标识
+    let (status_icon, status_text) = if status.is_server_error() {
+        ("❌", "Server Error")
+    } else if status.is_client_error() {
+        ("⚠️", "Client Error")
+    } else {
+        ("✓", "Success")
+    };
+
+    // 构建Footer
+    let footer = format!("###################################{}###########", uri.path());
+
+    // 构建响应日志
+    let response_log = format!(
+        "\n└─ 📤 RESPONSE [{}]\n\
+            │  Method: {} {}\n\
+            │  Handler: {}\n\
+            │  Duration: {}ms\n\
+            │  Client: {} | User: {}\n\
+            │  Request ID: {}\n\
+            └─ {} {}\n\
+            \n\
+            {}",
+        status.as_u16(),
+        method,
+        uri,
+        matched_path,
+        duration.as_millis(),
+        addr.ip(),
+        user_display,
+        request_id,
+        status_icon,
+        status_text,
+        footer
+    );
+
     // 根据状态码选择日志级别
     if status.is_server_error() {
-        warn!(
-            method = %method,
-            uri = %uri,
-            status = %status.as_u16(),
-            duration_ms = duration.as_millis(),
-            client_ip = %addr.ip(),
-            user_id = ?user_id,
-            "Request completed with server error"
-        );
+        tracing::error!("{}", response_log);
     } else if status.is_client_error() {
-        warn!(
-            method = %method,
-            uri = %uri,
-            status = %status.as_u16(),
-            duration_ms = duration.as_millis(),
-            client_ip = %addr.ip(),
-            user_id = ?user_id,
-            "Request completed with client error"
-        );
+        tracing::warn!("{}", response_log);
     } else {
-        info!(
-            method = %method,
-            uri = %uri,
-            status = %status.as_u16(),
-            duration_ms = duration.as_millis(),
-            client_ip = %addr.ip(),
-            user_id = ?user_id,
-            "Request completed successfully"
-        );
+        tracing::info!("{}", response_log);
     }
 
     response
@@ -216,12 +288,17 @@ pub async fn request_id_middleware(request: Request, next: Next) -> Response {
     let mut response = next.run(request).await;
 
     // 将请求ID添加到响应头
-    response.headers_mut().insert(
-        "X-Request-ID",
-        request_id.parse().unwrap(),
-    );
+    response.headers_mut().insert("X-Request-ID", request_id.parse().unwrap());
 
     response
+}
+
+/// 辅助函数：为请求体添加缩进，使其在日志中更易读
+fn indent_body(body: &str) -> String {
+    body.lines()
+        .map(|line| format!("         │    {}", line))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 #[cfg(test)]
@@ -234,10 +311,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_request_id_middleware() {
-        use axum::{
-            routing::get,
-            Router,
-        };
+        use axum::{response::IntoResponse, routing::get, Router};
         use tower::ServiceExt; // for `oneshot`
 
         // 定义一个简单的处理函数
@@ -251,10 +325,7 @@ mod tests {
             .layer(axum::middleware::from_fn(request_id_middleware));
 
         // 发送请求
-        let request = HttpRequest::builder()
-            .uri("/")
-            .body(Body::empty())
-            .unwrap();
+        let request = HttpRequest::builder().uri("/").body(Body::empty()).unwrap();
 
         let response = app.oneshot(request).await.unwrap();
 
