@@ -196,10 +196,14 @@ impl DeviceOperationRequest {
 
 /// 交易鉴证请求
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AttestTransactionRequest {
     pub device_id: String,
     pub amount: i64,
     pub currency: String,
+    /// 可选的健康检查数据（Android端可能会发送，但后端暂不使用）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub health_check: Option<serde_json::Value>,
 }
 
 impl AttestTransactionRequest {
@@ -222,6 +226,7 @@ impl AttestTransactionRequest {
 
 /// 交易处理请求
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProcessTransactionRequest {
     pub device_id: String,
     pub transaction_type: TransactionType,

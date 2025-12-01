@@ -190,24 +190,39 @@ pub struct ProcessTransactionResponse {
 
 /// 交易响应
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TransactionResponse {
     pub id: String,
+    #[serde(rename = "deviceId")]
     pub device_id: String,
+    #[serde(rename = "type")]
     pub transaction_type: String,
     pub amount: i64,
     pub currency: String,
     pub status: TransactionStatus,
+    #[serde(rename = "cardNumberMasked")]
     pub card_number_masked: Option<String>,
+    #[serde(rename = "authCode")]
     pub authorization_code: Option<String>,
+    #[serde(rename = "timestamp")]
     pub created_at: String,
 }
 
 impl From<Transaction> for TransactionResponse {
     fn from(tx: Transaction) -> Self {
+        // 将枚举转换为大写字符串，匹配前端期望的格式
+        let transaction_type = match tx.transaction_type {
+            crate::models::TransactionType::Payment => "PAYMENT",
+            crate::models::TransactionType::Refund => "REFUND",
+            crate::models::TransactionType::Void => "VOID",
+            crate::models::TransactionType::PreAuth => "PREAUTH",
+            crate::models::TransactionType::Capture => "CAPTURE",
+        }.to_string();
+
         Self {
             id: tx.id,
             device_id: tx.device_id,
-            transaction_type: format!("{:?}", tx.transaction_type),
+            transaction_type,
             amount: tx.amount,
             currency: tx.currency,
             status: tx.status,
@@ -221,6 +236,7 @@ impl From<Transaction> for TransactionResponse {
 /// 交易列表响应
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionListResponse {
+    #[serde(rename = "items")]
     pub transactions: Vec<TransactionResponse>,
     pub total: i64,
 }

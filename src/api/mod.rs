@@ -98,12 +98,31 @@ impl AppState {
             hsm_client.clone(),
         ));
 
+        // 初始化Redis客户端包装器（用于TransactionTokenService）
+        let redis_wrapper = match crate::infrastructure::redis::RedisClient::new(
+            &crate::infrastructure::redis::RedisConfig {
+                url: config.redis.url.clone(),
+            }
+        ).await {
+            Ok(client) => Some(client),
+            Err(e) => {
+                tracing::warn!("Failed to initialize Redis client: {}", e);
+                None
+            }
+        };
+
+        let transaction_token_service = Arc::new(TransactionTokenService::new(
+            jwt_service.clone(),
+            redis_wrapper,
+        ));
+
         let transaction_service = Arc::new(TransactionService::new(
             transaction_repo.clone(),
             device_repo.clone(),
             audit_repo.clone(),
             (*dukpt).clone(),
             hsm_client.clone(),
+            transaction_token_service.clone(),
         ));
 
         let audit_service = Arc::new(AuditService::new(audit_repo.clone()));
@@ -127,24 +146,6 @@ impl AppState {
             version_repo.clone(),
             device_repo.clone(),
             audit_repo.clone(),
-        ));
-
-        // 初始化Redis客户端包装器（用于TransactionTokenService）
-        let redis_wrapper = match crate::infrastructure::redis::RedisClient::new(
-            &crate::infrastructure::redis::RedisConfig {
-                url: config.redis.url.clone(),
-            }
-        ).await {
-            Ok(client) => Some(client),
-            Err(e) => {
-                tracing::warn!("Failed to initialize Redis client: {}", e);
-                None
-            }
-        };
-
-        let transaction_token_service = Arc::new(TransactionTokenService::new(
-            jwt_service.clone(),
-            redis_wrapper,
         ));
 
         // 初始化WebSocket连接池和通知服务

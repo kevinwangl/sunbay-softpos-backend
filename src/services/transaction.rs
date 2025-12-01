@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use crate::{
     dto::{
         AttestTransactionRequest, AttestTransactionResponse, ProcessTransactionRequest,
@@ -11,6 +12,7 @@ use crate::{
     repositories::{TransactionRepository, DeviceRepository, AuditLogRepository},
     security::{DukptKeyDerivation, crypto},
     infrastructure::HsmClient,
+    services::TransactionTokenService,
     utils::error::AppError,
 };
 
@@ -22,6 +24,7 @@ pub struct TransactionService {
     audit_repo: AuditLogRepository,
     dukpt: DukptKeyDerivation,
     hsm_client: Option<HsmClient>,
+    transaction_token_service: Arc<TransactionTokenService>,
 }
 
 impl TransactionService {
@@ -32,6 +35,7 @@ impl TransactionService {
         audit_repo: AuditLogRepository,
         dukpt: DukptKeyDerivation,
         hsm_client: Option<HsmClient>,
+        transaction_token_service: Arc<TransactionTokenService>,
     ) -> Self {
         Self {
             transaction_repo,
@@ -39,6 +43,7 @@ impl TransactionService {
             audit_repo,
             dukpt,
             hsm_client,
+            transaction_token_service,
         }
     }
 
@@ -79,9 +84,30 @@ impl TransactionService {
             ));
         }
 
-        // 生成交易令牌（有效期15分钟）
-        let transaction_token = crypto::generate_random_hex(32);
-        let expires_at = chrono::Utc::now() + chrono::Duration::minutes(15);
+        // 创建模拟的健康检查对象（简化版本，实际应该从数据库获取最新的健康检查）
+        let mock_health_check = crate::models::HealthCheck {
+            id: uuid::Uuid::new_v4().to_string(),
+            device_id: request.device_id.clone(),
+            security_score: 85, // 默认安全分数
+            root_status: false,
+            bootloader_status: false,
+            system_integrity: true,
+            app_integrity: true,
+            tee_status: true,
+            recommended_action: crate::models::RecommendedAction::None,
+            details: None,
+            created_at: chrono::Utc::now().to_rfc3339(),
+        };
+
+        // 使用交易令牌服务生成JWT令牌
+        let token_result = self.transaction_token_service
+            .generate_token(&request.device_id, &mock_health_check)
+            .await?;
+
+        let transaction_token = token_result.token;
+        let expires_at = chrono::DateTime::parse_from_rfc3339(&token_result.expires_at)
+            .map_err(|e| AppError::InternalWithMessage(format!("Invalid timestamp: {}", e)))?
+            .with_timezone(&chrono::Utc);
 
         // 记录审计日志
         let audit_log = AuditLog::new(

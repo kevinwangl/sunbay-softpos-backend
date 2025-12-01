@@ -299,13 +299,8 @@ pub async fn list_transactions(
         )
         .await?;
 
-    let wrapped_response = serde_json::json!({
-        "code": 200,
-        "message": "Success",
-        "data": response_data
-    });
-
-    Ok((StatusCode::OK, Json(wrapped_response)))
+    // 直接返回 TransactionListResponse，它已经有 items 和 total 字段
+    Ok((StatusCode::OK, Json(response_data)))
 }
 
 /// 获取交易详情处理器
