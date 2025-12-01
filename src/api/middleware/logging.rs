@@ -105,6 +105,33 @@ pub async fn logging_middleware(
     let duration = start.elapsed();
     let status = response.status();
 
+    // 捕获响应体（仅用于日志）
+    let (parts, body) = response.into_parts();
+    let bytes = match axum::body::to_bytes(body, usize::MAX).await {
+        Ok(bytes) => bytes,
+        Err(err) => {
+            warn!("Failed to read response body: {}", err);
+            return Response::from_parts(parts, axum::body::Body::empty());
+        },
+    };
+
+    // 尝试将响应体解析为 JSON 字符串以便打印
+    let response_body_str = if !bytes.is_empty() {
+        match std::str::from_utf8(&bytes) {
+            Ok(s) => {
+                // 尝试格式化 JSON
+                if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(s) {
+                    serde_json::to_string_pretty(&json_value).unwrap_or_else(|_| s.to_string())
+                } else {
+                    s.to_string()
+                }
+            },
+            Err(_) => format!("<binary data, {} bytes>", bytes.len()),
+        }
+    } else {
+        String::from("<empty>")
+    };
+
     // 根据状态码选择日志级别和状态标识
     let (status_icon, status_text) = if status.is_server_error() {
         ("❌", "Server Error")
@@ -125,6 +152,7 @@ pub async fn logging_middleware(
             │  Duration: {}ms\n\
             │  Client: {} | User: {}\n\
             │  Request ID: {}\n\
+            │  Response Body:\n{}\n\
             └─ {} {}\n\
             \n\
             {}",
@@ -136,6 +164,7 @@ pub async fn logging_middleware(
         addr.ip(),
         user_display,
         request_id,
+        indent_body(&response_body_str),
         status_icon,
         status_text,
         footer
@@ -150,7 +179,8 @@ pub async fn logging_middleware(
         tracing::info!("{}", response_log);
     }
 
-    response
+    // 重建响应
+    Response::from_parts(parts, axum::body::Body::from(bytes))
 }
 
 /// 结构化日志中间件
