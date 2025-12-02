@@ -8,6 +8,8 @@ database:
 
 redis:
   url: "redis://127.0.0.1:6379"
+  # username: "default"  # 可选，Redis 6.0+
+  # password: "your-password"  # 可选
 
 jwt:
   secret: "development-secret-key-change-in-production-min-32-chars"

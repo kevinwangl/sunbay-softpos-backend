@@ -5,6 +5,8 @@ use std::time::Duration;
 #[derive(Debug, Clone)]
 pub struct RedisConfig {
     pub url: String,
+    pub username: Option<String>,
+    pub password: Option<String>,
 }
 
 /// Redis客户端封装
@@ -17,9 +19,12 @@ impl RedisClient {
     /// 创建新的Redis客户端
     pub async fn new(config: &RedisConfig) -> Result<Self, RedisError> {
         tracing::info!("Initializing Redis client");
-        tracing::debug!("Redis URL: {}", mask_redis_url(&config.url));
+        
+        // 构建 Redis 连接 URL
+        let redis_url = build_redis_url(config);
+        tracing::debug!("Redis URL: {}", mask_redis_url(&redis_url));
 
-        let client = Client::open(config.url.as_str())?;
+        let client = Client::open(redis_url.as_str())?;
         let manager = ConnectionManager::new(client).await?;
 
         tracing::info!("Redis client initialized successfully");
@@ -122,6 +127,39 @@ impl RedisClient {
     }
 }
 
+/// 构建 Redis 连接 URL
+fn build_redis_url(config: &RedisConfig) -> String {
+    let mut url = config.url.clone();
+    
+    // 如果配置了用户名或密码，需要重新构建 URL
+    if config.username.is_some() || config.password.is_some() {
+        // 解析原始 URL
+        if let Some(protocol_end) = url.find("://") {
+            let protocol = &url[..protocol_end];
+            let rest = &url[protocol_end + 3..];
+            
+            // 移除原有的认证信息（如果有）
+            let host_part = if let Some(at_pos) = rest.find('@') {
+                &rest[at_pos + 1..]
+            } else {
+                rest
+            };
+            
+            // 构建新的认证信息
+            let auth = match (&config.username, &config.password) {
+                (Some(username), Some(password)) => format!("{}:{}@", username, password),
+                (None, Some(password)) => format!(":{}@", password),
+                (Some(username), None) => format!("{}@", username),
+                (None, None) => String::new(),
+            };
+            
+            url = format!("{}://{}{}", protocol, auth, host_part);
+        }
+    }
+    
+    url
+}
+
 /// 屏蔽Redis URL中的敏感信息
 fn mask_redis_url(url: &str) -> String {
     if url.contains("://") {
@@ -176,6 +214,8 @@ mod tests {
     async fn test_redis_operations() {
         let config = RedisConfig {
             url: "redis://127.0.0.1:6379".to_string(),
+            username: None,
+            password: None,
         };
 
         let client = RedisClient::new(&config).await;
@@ -213,6 +253,8 @@ mod tests {
     async fn test_redis_expiration() {
         let config = RedisConfig {
             url: "redis://127.0.0.1:6379".to_string(),
+            username: None,
+            password: None,
         };
 
         let client = RedisClient::new(&config).await;
@@ -241,6 +283,8 @@ mod tests {
     async fn test_redis_increment() {
         let config = RedisConfig {
             url: "redis://127.0.0.1:6379".to_string(),
+            username: None,
+            password: None,
         };
 
         let client = RedisClient::new(&config).await;

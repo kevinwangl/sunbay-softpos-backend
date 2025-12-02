@@ -102,6 +102,8 @@ impl AppState {
         let redis_wrapper = match crate::infrastructure::redis::RedisClient::new(
             &crate::infrastructure::redis::RedisConfig {
                 url: config.redis.url.clone(),
+                username: config.redis.username.clone(),
+                password: config.redis.password.clone(),
             }
         ).await {
             Ok(client) => Some(client),

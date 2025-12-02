@@ -129,7 +129,7 @@ pub async fn get_operator_logs(
 ///
 /// GET /api/v1/audit/statistics
 pub async fn get_audit_statistics(
-    State(state): State<Arc<AppState>>,
+    State(_state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
     // 获取审计日志统计
     #[derive(serde::Serialize)]
