@@ -1,20 +1,20 @@
-use std::sync::Arc;
 use crate::{
     dto::{
-        AttestTransactionRequest, AttestTransactionResponse, ProcessTransactionRequest,
-        ProcessTransactionResponse, TransactionResponse, TransactionListResponse,
-        AttestPinpadRequest, AttestPinpadResponse,
+        AttestPinpadRequest, AttestPinpadResponse, AttestTransactionRequest,
+        AttestTransactionResponse, ProcessTransactionRequest, ProcessTransactionResponse,
+        TransactionListResponse, TransactionResponse,
     },
-    models::{
-        Transaction, TransactionStatus, TransactionType, DeviceStatus, DeviceMode,
-        AuditLog, OperationResult,
-    },
-    repositories::{TransactionRepository, DeviceRepository, AuditLogRepository},
-    security::{DukptKeyDerivation, crypto},
     infrastructure::HsmClient,
+    models::{
+        AuditLog, DeviceMode, DeviceStatus, OperationResult, Transaction, TransactionStatus,
+        TransactionType,
+    },
+    repositories::{AuditLogRepository, DeviceRepository, TransactionRepository},
+    security::{crypto, DukptKeyDerivation},
     services::TransactionTokenService,
     utils::error::AppError,
 };
+use std::sync::Arc;
 
 /// 交易服务
 #[derive(Clone)]
@@ -66,9 +66,7 @@ impl TransactionService {
             .ok_or_else(|| AppError::NotFound("Device not found".to_string()))?;
 
         if device.status != DeviceStatus::Active.as_str() {
-            return Err(AppError::BadRequest(
-                "Device must be in active status".to_string(),
-            ));
+            return Err(AppError::BadRequest("Device must be in active status".to_string()));
         }
 
         if DeviceMode::from_str(&device.device_mode) != Some(DeviceMode::FullPos) {
@@ -100,7 +98,8 @@ impl TransactionService {
         };
 
         // 使用交易令牌服务生成JWT令牌
-        let token_result = self.transaction_token_service
+        let token_result = self
+            .transaction_token_service
             .generate_token(&request.device_id, &mock_health_check)
             .await?;
 
@@ -152,15 +151,13 @@ impl TransactionService {
             .ok_or_else(|| AppError::NotFound("Device not found".to_string()))?;
 
         if device.status != DeviceStatus::Active.as_str() {
-            return Err(AppError::BadRequest(
-                "Device must be in active status".to_string(),
-            ));
+            return Err(AppError::BadRequest("Device must be in active status".to_string()));
         }
 
         // 验证KSN（暂时注释掉以保障流程顺利）
         // TODO: 在生产环境中应该启用 KSN 验证
         let device_ksn = &device.current_ksn;
-        
+
         tracing::warn!(
             "KSN validation temporarily disabled for demo. Device KSN: {}, Request KSN: {}",
             device_ksn,
@@ -182,9 +179,16 @@ impl TransactionService {
 
         transaction.encrypted_pin_block = Some(request.encrypted_pin_block);
         transaction.card_number_masked = request.card_number_masked;
+        transaction.client_ip = request.client_ip;
+        transaction.latitude = request.latitude;
+        transaction.longitude = request.longitude;
+        transaction.location_accuracy = request.location_accuracy.map(|v| v as f64);
+        transaction.location_timestamp = request
+            .location_timestamp
+            .and_then(|ts| chrono::DateTime::parse_from_rfc3339(&ts).map(|dt| dt.naive_utc()).ok());
 
         // 模拟交易处理（在实际环境中，这里会调用支付网关）
-        let (status, auth_code, response_code, response_message) = 
+        let (status, auth_code, response_code, response_message) =
             self.simulate_transaction_processing(&transaction).await?;
 
         transaction.status = status.clone();
@@ -207,16 +211,13 @@ impl TransactionService {
             OperationResult::Failure
         };
 
-        let audit_log = AuditLog::new(
-            "TRANSACTION_PROCESSING".to_string(),
-            operator.to_string(),
-            audit_result,
-        )
-        .with_device_id(request.device_id.clone())
-        .with_details(format!(
-            "Transaction processed: type={:?}, amount={}, status={:?}",
-            request.transaction_type, request.amount, status
-        ));
+        let audit_log =
+            AuditLog::new("TRANSACTION_PROCESSING".to_string(), operator.to_string(), audit_result)
+                .with_device_id(request.device_id.clone())
+                .with_details(format!(
+                    "Transaction processed: type={:?}, amount={}, status={:?}",
+                    request.transaction_type, request.amount, status
+                ));
 
         self.audit_repo.create(&audit_log).await?;
 
@@ -249,15 +250,11 @@ impl TransactionService {
             .ok_or_else(|| AppError::NotFound("Device not found".to_string()))?;
 
         if device.status != DeviceStatus::Active.as_str() {
-            return Err(AppError::BadRequest(
-                "Device must be in active status".to_string(),
-            ));
+            return Err(AppError::BadRequest("Device must be in active status".to_string()));
         }
 
         if DeviceMode::from_str(&device.device_mode) != Some(DeviceMode::PinPad) {
-            return Err(AppError::BadRequest(
-                "Device must be in PINPad mode".to_string(),
-            ));
+            return Err(AppError::BadRequest("Device must be in PINPad mode".to_string()));
         }
 
         // 检查设备是否已注入密钥
@@ -293,7 +290,10 @@ impl TransactionService {
     }
 
     /// 获取交易详情
-    pub async fn get_transaction(&self, transaction_id: &str) -> Result<TransactionResponse, AppError> {
+    pub async fn get_transaction(
+        &self,
+        transaction_id: &str,
+    ) -> Result<TransactionResponse, AppError> {
         tracing::debug!("Getting transaction: {}", transaction_id);
 
         let transaction = self
@@ -321,20 +321,12 @@ impl TransactionService {
             .list(device_id, status.clone(), transaction_type.clone(), limit, offset)
             .await?;
 
-        let total = self
-            .transaction_repo
-            .count(device_id, status, transaction_type)
-            .await?;
+        let total = self.transaction_repo.count(device_id, status, transaction_type).await?;
 
-        let transaction_responses: Vec<TransactionResponse> = transactions
-            .into_iter()
-            .map(TransactionResponse::from)
-            .collect();
+        let transaction_responses: Vec<TransactionResponse> =
+            transactions.into_iter().map(TransactionResponse::from).collect();
 
-        Ok(TransactionListResponse {
-            transactions: transaction_responses,
-            total,
-        })
+        Ok(TransactionListResponse { transactions: transaction_responses, total })
     }
 
     /// 获取设备交易统计
@@ -355,7 +347,7 @@ impl TransactionService {
     }
 
     /// 模拟交易处理
-    /// 
+    ///
     /// 在实际环境中，这里会调用真实的支付网关或处理器
     async fn simulate_transaction_processing(
         &self,

@@ -236,6 +236,16 @@ pub struct ProcessTransactionRequest {
     pub ksn: String,
     pub card_number_masked: Option<String>,
     pub transaction_token: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_ip: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub latitude: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub longitude: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location_accuracy: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location_timestamp: Option<String>,
 }
 
 impl ProcessTransactionRequest {

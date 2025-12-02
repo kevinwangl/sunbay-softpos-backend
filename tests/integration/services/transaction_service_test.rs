@@ -1,15 +1,17 @@
 // Integration tests for Transaction Service
-use sqlx::SqlitePool;
 use chrono::Utc;
+use sqlx::SqlitePool;
 
 #[cfg(test)]
 mod transaction_service_tests {
     use super::*;
-    use crate::services::transaction::TransactionService;
-    use crate::models::{TransactionStatus, TransactionType};
     use crate::dto::ProcessTransactionRequest;
-    use crate::repositories::{TransactionRepository, DeviceRepository, AuditLogRepository};
-    use crate::security::DukptKeyDerivation; // Correct import
+    use crate::models::{TransactionStatus, TransactionType};
+    use crate::repositories::{AuditLogRepository, DeviceRepository, TransactionRepository};
+    use crate::security::{DukptKeyDerivation, JwtService};
+    use crate::services::transaction::TransactionService; // Correct import
+    use crate::services::TransactionTokenService;
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_process_transaction_success() {
@@ -18,10 +20,13 @@ mod transaction_service_tests {
         let device_repo = DeviceRepository::new(pool.clone());
         let audit_repo = AuditLogRepository::new(pool.clone());
         let dukpt = DukptKeyDerivation::new(vec![0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF]);
-        let service = TransactionService::new(tx_repo, device_repo, audit_repo, dukpt, None);
+        let jwt_service = Arc::new(JwtService::new("test_secret".to_string(), 3600));
+        let token_service = Arc::new(TransactionTokenService::new(jwt_service, None));
+        let service =
+            TransactionService::new(tx_repo, device_repo, audit_repo, dukpt, None, token_service);
 
         let device_id = create_test_device(&pool).await;
-        
+
         let request = ProcessTransactionRequest {
             device_id: device_id.clone(),
             transaction_type: TransactionType::Payment,
@@ -31,6 +36,11 @@ mod transaction_service_tests {
             ksn: "FFFF9876543210E00000".to_string(),
             card_number_masked: Some("************1234".to_string()),
             transaction_token: "token".to_string(),
+            client_ip: Some("127.0.0.1".to_string()),
+            latitude: Some(37.7749),
+            longitude: Some(-122.4194),
+            location_accuracy: Some(10.0),
+            location_timestamp: Some(Utc::now().to_rfc3339()),
         };
 
         let result = service.process_transaction(request, "test_user").await;
@@ -47,10 +57,13 @@ mod transaction_service_tests {
         let device_repo = DeviceRepository::new(pool.clone());
         let audit_repo = AuditLogRepository::new(pool.clone());
         let dukpt = DukptKeyDerivation::new(vec![0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF]);
-        let service = TransactionService::new(tx_repo, device_repo, audit_repo, dukpt, None);
+        let jwt_service = Arc::new(JwtService::new("test_secret".to_string(), 3600));
+        let token_service = Arc::new(TransactionTokenService::new(jwt_service, None));
+        let service =
+            TransactionService::new(tx_repo, device_repo, audit_repo, dukpt, None, token_service);
 
         let fake_device_id = uuid::Uuid::new_v4().to_string();
-        
+
         let request = ProcessTransactionRequest {
             device_id: fake_device_id,
             transaction_type: TransactionType::Payment,
@@ -60,6 +73,11 @@ mod transaction_service_tests {
             ksn: "FFFF9876543210E00000".to_string(),
             card_number_masked: Some("************1234".to_string()),
             transaction_token: "token".to_string(),
+            client_ip: Some("127.0.0.1".to_string()),
+            latitude: Some(37.7749),
+            longitude: Some(-122.4194),
+            location_accuracy: Some(10.0),
+            location_timestamp: Some(Utc::now().to_rfc3339()),
         };
 
         let result = service.process_transaction(request, "test_user").await;
@@ -73,7 +91,10 @@ mod transaction_service_tests {
         let device_repo = DeviceRepository::new(pool.clone());
         let audit_repo = AuditLogRepository::new(pool.clone());
         let dukpt = DukptKeyDerivation::new(vec![0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF]);
-        let service = TransactionService::new(tx_repo, device_repo, audit_repo, dukpt, None);
+        let jwt_service = Arc::new(JwtService::new("test_secret".to_string(), 3600));
+        let token_service = Arc::new(TransactionTokenService::new(jwt_service, None));
+        let service =
+            TransactionService::new(tx_repo, device_repo, audit_repo, dukpt, None, token_service);
 
         let device_id = create_test_device(&pool).await;
 
@@ -97,7 +118,10 @@ mod transaction_service_tests {
         let device_repo = DeviceRepository::new(pool.clone());
         let audit_repo = AuditLogRepository::new(pool.clone());
         let dukpt = DukptKeyDerivation::new(vec![0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF]);
-        let service = TransactionService::new(tx_repo, device_repo, audit_repo, dukpt, None);
+        let jwt_service = Arc::new(JwtService::new("test_secret".to_string(), 3600));
+        let token_service = Arc::new(TransactionTokenService::new(jwt_service, None));
+        let service =
+            TransactionService::new(tx_repo, device_repo, audit_repo, dukpt, None, token_service);
 
         let device_id = create_test_device(&pool).await;
 
@@ -111,6 +135,11 @@ mod transaction_service_tests {
             ksn: "FFFF9876543210E00000".to_string(),
             card_number_masked: Some("************1234".to_string()),
             transaction_token: "token".to_string(),
+            client_ip: Some("127.0.0.1".to_string()),
+            latitude: Some(37.7749),
+            longitude: Some(-122.4194),
+            location_accuracy: Some(10.0),
+            location_timestamp: Some(Utc::now().to_rfc3339()),
         };
 
         let result = service.process_transaction(request, "test_user").await;
@@ -131,7 +160,7 @@ async fn create_test_device(pool: &SqlitePool) -> String {
     let device_id = format!("TEST-DEVICE-{}", uuid::Uuid::new_v4());
     let now = Utc::now().to_rfc3339();
     let public_key = vec![1, 2, 3];
-    
+
     sqlx::query!(
         r#"
         INSERT INTO devices (id, imei, model, os_version, tee_type, device_mode, public_key, status, security_score, current_ksn, key_remaining_count, key_total_count, registered_at, updated_at)
@@ -156,13 +185,13 @@ async fn create_test_device(pool: &SqlitePool) -> String {
     .await
     .unwrap();
 
-    id 
+    id
 }
 
 async fn create_test_transaction(pool: &SqlitePool, device_id: &str) -> String {
     let id = uuid::Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
-    
+
     sqlx::query!(
         r#"
         INSERT INTO transactions (id, device_id, transaction_type, amount, currency, status, ksn, created_at, updated_at)

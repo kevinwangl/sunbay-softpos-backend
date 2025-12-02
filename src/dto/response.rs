@@ -204,6 +204,16 @@ pub struct TransactionResponse {
     pub card_number_masked: Option<String>,
     #[serde(rename = "authCode")]
     pub authorization_code: Option<String>,
+    #[serde(rename = "clientIp", skip_serializing_if = "Option::is_none")]
+    pub client_ip: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub latitude: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub longitude: Option<f64>,
+    #[serde(rename = "locationAccuracy", skip_serializing_if = "Option::is_none")]
+    pub location_accuracy: Option<f32>,
+    #[serde(rename = "locationTimestamp", skip_serializing_if = "Option::is_none")]
+    pub location_timestamp: Option<String>,
     #[serde(rename = "timestamp")]
     pub created_at: String,
 }
@@ -217,7 +227,8 @@ impl From<Transaction> for TransactionResponse {
             crate::models::TransactionType::Void => "VOID",
             crate::models::TransactionType::PreAuth => "PREAUTH",
             crate::models::TransactionType::Capture => "CAPTURE",
-        }.to_string();
+        }
+        .to_string();
 
         Self {
             id: tx.id,
@@ -228,6 +239,14 @@ impl From<Transaction> for TransactionResponse {
             status: tx.status,
             card_number_masked: tx.card_number_masked,
             authorization_code: tx.authorization_code,
+            client_ip: tx.client_ip,
+            latitude: tx.latitude,
+            longitude: tx.longitude,
+            location_accuracy: tx.location_accuracy.map(|v| v as f32),
+            location_timestamp: tx.location_timestamp.map(|ts| {
+                chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(ts, chrono::Utc)
+                    .to_rfc3339()
+            }),
             created_at: tx.created_at,
         }
     }

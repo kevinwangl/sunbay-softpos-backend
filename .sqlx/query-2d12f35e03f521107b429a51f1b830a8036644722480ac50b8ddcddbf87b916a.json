@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT \n                id, imei, model, os_version, tee_type, device_mode, public_key,\n                status, merchant_id, merchant_name, \n                security_score as \"security_score: i32\",\n                current_ksn, ipek_injected_at, \n                key_remaining_count as \"key_remaining_count: i32\", \n                key_total_count as \"key_total_count: i32\",\n                registered_at, approved_at, approved_by, last_active_at, updated_at\n            FROM devices\n            WHERE id = ?\n            ",
+  "query": "\n            SELECT \n                id, imei, model, os_version, tee_type, device_mode, public_key,\n                status, merchant_id, merchant_name, \n                security_score as \"security_score: i32\",\n                current_ksn, ipek_injected_at, \n                key_remaining_count as \"key_remaining_count: i32\", \n                key_total_count as \"key_total_count: i32\",\n                registered_at, approved_at, approved_by, last_active_at, updated_at,\n                nfc_present\n            FROM devices\n            WHERE id = ?\n            ",
   "describe": {
     "columns": [
       {
@@ -102,6 +102,11 @@
         "name": "updated_at",
         "ordinal": 19,
         "type_info": "Text"
+      },
+      {
+        "name": "nfc_present",
+        "ordinal": 20,
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -127,8 +132,9 @@
       true,
       true,
       true,
+      false,
       false
     ]
   },
-  "hash": "1757b6340c9f35667be334744b3587d3a0ed65cae27312017a5f3a24b2d11a97"
+  "hash": "2d12f35e03f521107b429a51f1b830a8036644722480ac50b8ddcddbf87b916a"
 }

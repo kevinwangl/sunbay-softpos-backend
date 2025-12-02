@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO transactions (\n                id, device_id, transaction_type, amount, currency,\n                status, encrypted_pin_block, ksn, card_number_masked,\n                merchant_id, terminal_id, authorization_code,\n                response_code, response_message,\n                client_ip, latitude, longitude, location_accuracy, location_timestamp,\n                created_at, updated_at\n            )\n            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 21
+    },
+    "nullable": []
+  },
+  "hash": "281339df503dff06d1e9047992026c7159882a5926091ed87444e1556d43a194"
+}

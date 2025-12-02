@@ -1,5 +1,5 @@
 // Unit tests for Device model
-use crate::models::device::{Device, DeviceStatus, TeeType, DeviceMode};
+use crate::models::device::{Device, DeviceMode, DeviceStatus, TeeType};
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -30,6 +30,7 @@ mod device_tests {
             approved_by: None,
             last_active_at: None,
             updated_at: Utc::now().to_rfc3339(),
+            nfc_present: true,
         };
 
         assert_eq!(device.imei, "123456789012345");
@@ -60,6 +61,7 @@ mod device_tests {
             approved_by: None,
             last_active_at: None,
             updated_at: Utc::now().to_rfc3339(),
+            nfc_present: true,
         };
 
         assert_eq!(device.status, DeviceStatus::Pending.as_str());
@@ -87,11 +89,7 @@ mod device_tests {
 
     #[test]
     fn test_device_id_format() {
-        let valid_ids = vec![
-            "DEVICE-001",
-            "TEST-DEVICE-123",
-            "PROD-DEVICE-999",
-        ];
+        let valid_ids = vec!["DEVICE-001", "TEST-DEVICE-123", "PROD-DEVICE-999"];
 
         for id in valid_ids {
             assert!(is_valid_device_id(id), "Device ID {} should be valid", id);
@@ -100,8 +98,8 @@ mod device_tests {
         let invalid_ids = vec![
             "",
             "DEVICE",
-            "device-001",  // lowercase
-            "DEVICE_001",  // underscore instead of hyphen
+            "device-001", // lowercase
+            "DEVICE_001", // underscore instead of hyphen
         ];
 
         for id in invalid_ids {
@@ -117,7 +115,7 @@ fn validate_security_score(score: i32) -> bool {
 
 fn is_valid_device_id(id: &str) -> bool {
     // Device ID should be uppercase, contain hyphens, and have at least one number
-    !id.is_empty() 
+    !id.is_empty()
         && id.chars().all(|c| c.is_uppercase() || c.is_numeric() || c == '-')
         && id.contains('-')
         && id.chars().any(|c| c.is_numeric())

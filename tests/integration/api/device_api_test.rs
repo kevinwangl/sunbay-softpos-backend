@@ -1,4 +1,10 @@
 // Integration tests for Device API endpoints
+use crate::api::AppState; // Import AppState
+use crate::infrastructure::config::{
+    Config, DatabaseConfig, HsmConfig, JwtConfig, LoggingConfig, RateLimitConfig, RedisConfig,
+    SecurityConfig, ServerConfig,
+};
+use crate::models::DeviceStatus;
 use axum::{
     body::Body,
     http::{Request, StatusCode},
@@ -8,22 +14,27 @@ use axum::{
 use serde_json::json;
 use sqlx::SqlitePool;
 use tower::ServiceExt; // for `oneshot`
-use crate::models::DeviceStatus;
-use crate::api::AppState; // Import AppState
-use crate::infrastructure::config::{Config, ServerConfig, DatabaseConfig, RedisConfig, JwtConfig, HsmConfig, SecurityConfig, LoggingConfig, RateLimitConfig};
 
 #[cfg(test)]
 mod device_api_tests {
     use super::*;
-    use crate::api::handlers::device::{register_device, get_device, list_devices, approve_device};
+    use crate::api::handlers::device::{approve_device, get_device, list_devices, register_device};
 
     fn create_test_config() -> Config {
         Config {
             server: ServerConfig { host: "0.0.0.0".to_string(), port: 8080 },
             database: DatabaseConfig { url: "sqlite::memory:".to_string(), max_connections: 5 },
             redis: RedisConfig { url: "redis://localhost".to_string() },
-            jwt: JwtConfig { secret: "test_secret_key_must_be_at_least_32_bytes_long".to_string(), expiration_hours: 1, refresh_expiration_days: 1 },
-            hsm: HsmConfig { base_url: "http://localhost".to_string(), api_key: "test".to_string(), timeout_seconds: 10 },
+            jwt: JwtConfig {
+                secret: "test_secret_key_must_be_at_least_32_bytes_long".to_string(),
+                expiration_hours: 1,
+                refresh_expiration_days: 1,
+            },
+            hsm: HsmConfig {
+                base_url: "http://localhost".to_string(),
+                api_key: "test".to_string(),
+                timeout_seconds: 10,
+            },
             security: SecurityConfig { bdk: "0123456789ABCDEFFEDCBA9876543210".to_string() },
             logging: LoggingConfig { level: "info".to_string(), format: "json".to_string() },
             rate_limit: RateLimitConfig { requests_per_second: 100, burst_size: 200 },
@@ -31,6 +42,20 @@ mod device_api_tests {
     }
 
     async fn setup_test_app(pool: SqlitePool) -> Router {
+        let jwt_service =
+            std::sync::Arc::new(crate::security::JwtService::new("secret".to_string(), 3600));
+        let transaction_token_service = std::sync::Arc::new(
+            crate::services::TransactionTokenService::new(jwt_service.clone(), None),
+        );
+
+        let threat_detection_service =
+            std::sync::Arc::new(crate::services::ThreatDetectionService::new(
+                crate::repositories::ThreatRepository::new(pool.clone()),
+                crate::repositories::DeviceRepository::new(pool.clone()),
+                crate::repositories::HealthCheckRepository::new(pool.clone()),
+                crate::repositories::AuditLogRepository::new(pool.clone()),
+            ));
+
         Router::new()
             .route("/api/devices", post(register_device))
             .route("/api/devices", get(list_devices))
@@ -42,48 +67,54 @@ mod device_api_tests {
                 redis_client: None,
                 hsm_client: None,
                 ws_pool: crate::api::websocket::create_connection_pool(),
-                notification_service: std::sync::Arc::new(crate::api::websocket::NotificationService::new(crate::api::websocket::create_connection_pool())),
-                jwt_service: std::sync::Arc::new(crate::security::JwtService::new("secret".to_string(), 3600)),
+                notification_service: std::sync::Arc::new(
+                    crate::api::websocket::NotificationService::new(
+                        crate::api::websocket::create_connection_pool(),
+                    ),
+                ),
+                jwt_service: jwt_service.clone(),
                 dukpt: std::sync::Arc::new(crate::security::DukptKeyDerivation::new(vec![])),
                 device_service: std::sync::Arc::new(crate::services::DeviceService::new(
                     crate::repositories::DeviceRepository::new(pool.clone()),
                     crate::repositories::AuditLogRepository::new(pool.clone()),
                     crate::security::DukptKeyDerivation::new(vec![]),
-                    None
+                    None,
                 )),
-                key_management_service: std::sync::Arc::new(crate::services::KeyManagementService::new(
-                    crate::repositories::DeviceRepository::new(pool.clone()),
-                    crate::repositories::AuditLogRepository::new(pool.clone()),
-                    crate::security::DukptKeyDerivation::new(vec![]),
-                    None
-                )),
+                key_management_service: std::sync::Arc::new(
+                    crate::services::KeyManagementService::new(
+                        crate::repositories::DeviceRepository::new(pool.clone()),
+                        crate::repositories::AuditLogRepository::new(pool.clone()),
+                        crate::security::DukptKeyDerivation::new(vec![]),
+                        None,
+                    ),
+                ),
                 transaction_service: std::sync::Arc::new(crate::services::TransactionService::new(
                     crate::repositories::TransactionRepository::new(pool.clone()),
                     crate::repositories::DeviceRepository::new(pool.clone()),
                     crate::repositories::AuditLogRepository::new(pool.clone()),
                     crate::security::DukptKeyDerivation::new(vec![]),
-                    None
+                    None,
+                    transaction_token_service.clone(),
                 )),
                 audit_service: std::sync::Arc::new(crate::services::AuditService::new(
-                    crate::repositories::AuditLogRepository::new(pool.clone())
+                    crate::repositories::AuditLogRepository::new(pool.clone()),
                 )),
-                health_check_service: std::sync::Arc::new(crate::services::HealthCheckService::new(
-                    crate::repositories::HealthCheckRepository::new(pool.clone()),
-                    crate::repositories::DeviceRepository::new(pool.clone()),
-                    crate::repositories::ThreatRepository::new(pool.clone()),
-                    crate::repositories::AuditLogRepository::new(pool.clone())
-                )),
-                threat_detection_service: std::sync::Arc::new(crate::services::ThreatDetectionService::new(
-                    crate::repositories::ThreatRepository::new(pool.clone()),
-                    crate::repositories::DeviceRepository::new(pool.clone()),
-                    crate::repositories::HealthCheckRepository::new(pool.clone()),
-                    crate::repositories::AuditLogRepository::new(pool.clone())
-                )),
+                health_check_service: std::sync::Arc::new(
+                    crate::services::HealthCheckService::new(
+                        crate::repositories::HealthCheckRepository::new(pool.clone()),
+                        crate::repositories::DeviceRepository::new(pool.clone()),
+                        crate::repositories::ThreatRepository::new(pool.clone()),
+                        crate::repositories::AuditLogRepository::new(pool.clone()),
+                        (*threat_detection_service).clone(),
+                    ),
+                ),
+                threat_detection_service,
                 version_service: std::sync::Arc::new(crate::services::VersionService::new(
                     crate::repositories::VersionRepository::new(pool.clone()),
                     crate::repositories::DeviceRepository::new(pool.clone()),
-                    crate::repositories::AuditLogRepository::new(pool.clone())
+                    crate::repositories::AuditLogRepository::new(pool.clone()),
                 )),
+                transaction_token_service,
             }))
     }
 
@@ -231,10 +262,13 @@ mod device_api_tests {
             .method("POST")
             .uri(&format!("/api/devices/{}/approve", device_id))
             .header("content-type", "application/json")
-            .body(Body::from(serde_json::to_vec(&json!({
-                "operator": "admin@example.com",
-                "device_id": device_id
-            })).unwrap()))
+            .body(Body::from(
+                serde_json::to_vec(&json!({
+                    "operator": "admin@example.com",
+                    "device_id": device_id
+                }))
+                .unwrap(),
+            ))
             .unwrap();
 
         let resp = app.oneshot(req).await.unwrap();
@@ -270,7 +304,7 @@ mod device_api_tests {
         let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
         let devices = body["data"].as_array().unwrap();
         assert_eq!(devices.len(), 2);
-        
+
         for device in devices {
             assert_eq!(device["status"], "ACTIVE");
         }
@@ -295,7 +329,7 @@ async fn create_test_device_with_imei(pool: &SqlitePool, imei: &str) -> uuid::Uu
     let id_str = id.to_string();
     let now = chrono::Utc::now().to_rfc3339();
     let public_key = vec![1, 2, 3];
-    
+
     sqlx::query!(
         r#"
         INSERT INTO devices (id, imei, model, os_version, tee_type, device_mode, public_key, status, security_score, current_ksn, key_remaining_count, key_total_count, registered_at, updated_at)
@@ -330,7 +364,7 @@ async fn create_test_device_with_status(pool: &SqlitePool, status: DeviceStatus)
     let now = chrono::Utc::now().to_rfc3339();
     let status_str = status.as_str();
     let public_key = vec![1, 2, 3];
-    
+
     sqlx::query!(
         r#"
         INSERT INTO devices (id, imei, model, os_version, tee_type, device_mode, public_key, status, security_score, current_ksn, key_remaining_count, key_total_count, registered_at, updated_at)

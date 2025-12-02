@@ -1,6 +1,6 @@
-use sqlx::SqlitePool;
 use crate::models::{Transaction, TransactionStatus, TransactionType};
 use crate::utils::error::AppError;
+use sqlx::SqlitePool;
 
 /// 交易Repository
 #[derive(Clone)]
@@ -22,9 +22,11 @@ impl TransactionRepository {
                 id, device_id, transaction_type, amount, currency,
                 status, encrypted_pin_block, ksn, card_number_masked,
                 merchant_id, terminal_id, authorization_code,
-                response_code, response_message, created_at, updated_at
+                response_code, response_message,
+                client_ip, latitude, longitude, location_accuracy, location_timestamp,
+                created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             transaction.id,
             transaction.device_id,
@@ -40,6 +42,11 @@ impl TransactionRepository {
             transaction.authorization_code,
             transaction.response_code,
             transaction.response_message,
+            transaction.client_ip,
+            transaction.latitude,
+            transaction.longitude,
+            transaction.location_accuracy,
+            transaction.location_timestamp,
             transaction.created_at,
             transaction.updated_at,
         )
@@ -61,7 +68,13 @@ impl TransactionRepository {
                 status as "status: _",
                 encrypted_pin_block, ksn, card_number_masked,
                 merchant_id, terminal_id, authorization_code,
-                response_code, response_message, created_at, updated_at
+                response_code, response_message,
+                client_ip, 
+                latitude as "latitude: f64", 
+                longitude as "longitude: f64", 
+                location_accuracy as "location_accuracy: f64", 
+                location_timestamp as "location_timestamp: chrono::NaiveDateTime",
+                created_at, updated_at
             FROM transactions
             WHERE id = ?
             "#,
@@ -88,7 +101,9 @@ impl TransactionRepository {
                 id, device_id, transaction_type, amount, currency,
                 status, encrypted_pin_block, ksn, card_number_masked,
                 merchant_id, terminal_id, authorization_code,
-                response_code, response_message, created_at, updated_at
+                response_code, response_message,
+                client_ip, latitude, longitude, location_accuracy, location_timestamp,
+                created_at, updated_at
             FROM transactions
             WHERE 1=1
             "#,
@@ -109,9 +124,7 @@ impl TransactionRepository {
         query.push_str(" ORDER BY created_at DESC");
         query.push_str(&format!(" LIMIT {} OFFSET {}", limit, offset));
 
-        let transactions = sqlx::query_as::<_, Transaction>(&query)
-            .fetch_all(&self.pool)
-            .await?;
+        let transactions = sqlx::query_as::<_, Transaction>(&query).fetch_all(&self.pool).await?;
 
         Ok(transactions)
     }
@@ -137,9 +150,7 @@ impl TransactionRepository {
             query.push_str(&format!(" AND transaction_type = '{:?}'", t));
         }
 
-        let result = sqlx::query_scalar::<_, i64>(&query)
-            .fetch_one(&self.pool)
-            .await?;
+        let result = sqlx::query_scalar::<_, i64>(&query).fetch_one(&self.pool).await?;
 
         Ok(result)
     }
@@ -183,12 +194,11 @@ impl TransactionRepository {
         &self,
         device_id: &str,
     ) -> Result<TransactionStats, AppError> {
-        let total = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM transactions WHERE device_id = ?",
-        )
-        .bind(device_id)
-        .fetch_one(&self.pool)
-        .await?;
+        let total =
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM transactions WHERE device_id = ?")
+                .bind(device_id)
+                .fetch_one(&self.pool)
+                .await?;
 
         let approved = sqlx::query_scalar::<_, i64>(
             "SELECT COUNT(*) FROM transactions WHERE device_id = ? AND status = 'Approved'",
@@ -211,12 +221,7 @@ impl TransactionRepository {
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(TransactionStats {
-            total,
-            approved,
-            declined,
-            total_amount: total_amount.unwrap_or(0),
-        })
+        Ok(TransactionStats { total, approved, declined, total_amount: total_amount.unwrap_or(0) })
     }
 }
 
