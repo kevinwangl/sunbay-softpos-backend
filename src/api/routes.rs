@@ -1,14 +1,20 @@
+use std::sync::Arc;
+
 use axum::{
     middleware,
     routing::{get, post, put},
     Router,
 };
-use std::sync::Arc;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::{
+    cors::{Any, CorsLayer},
+    services::ServeDir,
+};
 
 use crate::api::{
-    handlers, middleware as api_middleware, websocket::websocket_handler, AppState, 
-    middleware::{MetricsCollector, metrics_handler},
+    handlers, middleware as api_middleware,
+    middleware::{metrics_handler, MetricsCollector},
+    websocket::websocket_handler,
+    AppState,
 };
 
 /// 创建应用路由
@@ -20,10 +26,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
     let rate_limiter = api_middleware::rate_limit_layer(api_middleware::RateLimitConfig::default());
 
     // 配置CORS
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+    let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any);
 
     // 公开路由（不需要认证）
     let public_routes = Router::new()
@@ -37,6 +40,12 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/auth/verify", post(handlers::verify_token))
         // 设备注册（公开）
         .route("/devices/register", post(handlers::register_device))
+        // 公开的内核下载端点（用于 demo）
+        .route("/public/kernels", get(handlers::list_stable_kernels_public))
+        .route("/public/kernels/latest", get(handlers::get_latest_kernel_public))
+        .route("/public/kernels/:version/download", get(handlers::download_kernel_public))
+        // 密钥注入（公开，用于 demo）
+        .route("/public/keys/inject", post(handlers::inject_key_public))
         // 威胁上报（公开，设备端调用）
         .route("/threats/report", post(handlers::report_threat))
         // 交易鉴证和处理（公开，设备端调用）
@@ -156,6 +165,13 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             "/versions/compatibility",
             get(handlers::get_compatibility_matrix),
         )
+        // 上传管理
+        .route("/uploads/kernel", post(handlers::upload_kernel))
+        // 内核管理
+        .route("/kernels", post(handlers::upload_kernel_handler).get(handlers::list_kernels))
+        .route("/kernels/:version", get(handlers::get_kernel).delete(handlers::delete_kernel))
+        .route("/kernels/:version/download", get(handlers::download_kernel))
+        .route("/kernels/:version/publish", post(handlers::publish_kernel))
         .route(
             "/versions/outdated-devices",
             get(handlers::get_outdated_devices),
@@ -213,14 +229,18 @@ pub fn create_router(state: Arc<AppState>) -> Router {
 
     // 根路由 - 添加根健康检查端点
     Router::new()
-        .route("/health", get(|| async {
-            use axum::Json;
-            Json(serde_json::json!({
-                "status": "ok",
-                "timestamp": chrono::Utc::now().to_rfc3339()
-            }))
-        }))
+        .route(
+            "/health",
+            get(|| async {
+                use axum::Json;
+                Json(serde_json::json!({
+                    "status": "ok",
+                    "timestamp": chrono::Utc::now().to_rfc3339()
+                }))
+            }),
+        )
         .nest("/api/v1", api_v1)
+        .nest_service("/uploads", ServeDir::new("uploads"))
         .layer(cors)
         .with_state(state)
 }

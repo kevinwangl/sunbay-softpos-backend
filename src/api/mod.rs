@@ -3,24 +3,25 @@ pub mod middleware;
 pub mod routes;
 pub mod websocket;
 
+use std::sync::Arc;
+
+use redis::Client as RedisClient;
+pub use routes::create_router;
+use sqlx::SqlitePool;
+pub use websocket::{ConnectionPool, NotificationService};
+
 use crate::{
     infrastructure::{Config, HsmClient},
     repositories::{
-        AuditLogRepository, DeviceRepository, HealthCheckRepository, ThreatRepository,
-        TransactionRepository, VersionRepository,
+        AuditLogRepository, DeviceRepository, HealthCheckRepository, KernelRepository,
+        ThreatRepository, TransactionRepository, VersionRepository,
     },
     security::{DukptKeyDerivation, JwtService},
     services::{
-        AuditService, DeviceService, HealthCheckService, KeyManagementService,
+        AuditService, DeviceService, HealthCheckService, KernelService, KeyManagementService,
         ThreatDetectionService, TransactionService, TransactionTokenService, VersionService,
     },
 };
-use redis::Client as RedisClient;
-use sqlx::SqlitePool;
-use std::sync::Arc;
-
-pub use routes::create_router;
-pub use websocket::{ConnectionPool, NotificationService};
 
 /// 应用状态
 #[derive(Clone)]
@@ -48,6 +49,7 @@ pub struct AppState {
     pub health_check_service: Arc<HealthCheckService>,
     pub threat_detection_service: Arc<ThreatDetectionService>,
     pub version_service: Arc<VersionService>,
+    pub kernel_service: Arc<KernelService>,
 }
 
 impl AppState {
@@ -82,6 +84,7 @@ impl AppState {
         let threat_repo = ThreatRepository::new(db_pool.clone());
         let transaction_repo = TransactionRepository::new(db_pool.clone());
         let version_repo = VersionRepository::new(db_pool.clone());
+        let kernel_repo = KernelRepository::new(db_pool.clone());
 
         // 初始化Services
         let device_service = Arc::new(DeviceService::new(
@@ -104,19 +107,19 @@ impl AppState {
                 url: config.redis.url.clone(),
                 username: config.redis.username.clone(),
                 password: config.redis.password.clone(),
-            }
-        ).await {
+            },
+        )
+        .await
+        {
             Ok(client) => Some(client),
             Err(e) => {
                 tracing::warn!("Failed to initialize Redis client: {}", e);
                 None
-            }
+            },
         };
 
-        let transaction_token_service = Arc::new(TransactionTokenService::new(
-            jwt_service.clone(),
-            redis_wrapper,
-        ));
+        let transaction_token_service =
+            Arc::new(TransactionTokenService::new(jwt_service.clone(), redis_wrapper));
 
         let transaction_service = Arc::new(TransactionService::new(
             transaction_repo.clone(),
@@ -150,6 +153,9 @@ impl AppState {
             audit_repo.clone(),
         ));
 
+        let kernel_service =
+            Arc::new(KernelService::new(kernel_repo.clone(), "uploads".to_string()));
+
         // 初始化WebSocket连接池和通知服务
         let ws_pool = websocket::create_connection_pool();
         let notification_service = Arc::new(NotificationService::new(ws_pool.clone()));
@@ -173,6 +179,7 @@ impl AppState {
             health_check_service,
             threat_detection_service,
             version_service,
+            kernel_service,
         })
     }
 

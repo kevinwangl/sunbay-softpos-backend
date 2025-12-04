@@ -3,10 +3,12 @@ pub mod auth;
 pub mod dashboard;
 pub mod device;
 pub mod health;
+pub mod kernel;
 pub mod key;
 pub mod pinpad;
 pub mod threat;
 pub mod transaction;
+pub mod upload;
 pub mod version;
 
 pub use audit::{
@@ -22,13 +24,24 @@ pub use health::{
     get_health_overview, get_health_statistics, health_check, list_health_checks,
     perform_initial_check, submit_health_check,
 };
+pub use kernel::{
+    delete_kernel,
+    download_kernel,
+    // Public endpoints
+    download_kernel_public,
+    get_kernel,
+    get_latest_kernel_public,
+    list_kernels,
+    list_stable_kernels_public,
+    publish_kernel,
+    upload_kernel as upload_kernel_handler,
+};
 pub use key::{
-    check_key_update_needed, get_devices_needing_key_update, get_key_status, inject_key,
-    update_key,
+    check_key_update_needed, encrypt_pin, get_devices_needing_key_update, get_key_status,
+    inject_key, inject_key_public, update_key,
 };
 pub use pinpad::{
-    attest_pinpad, get_device_pin_statistics, get_pinpad_device_status,
-    list_pin_encryption_logs,
+    attest_pinpad, get_device_pin_statistics, get_pinpad_device_status, list_pin_encryption_logs,
 };
 pub use threat::{
     get_device_threat_history, get_threat, get_threat_statistics, list_threats, report_threat,
@@ -39,8 +52,9 @@ pub use transaction::{
     get_transaction_statistics, list_transactions, process_transaction, process_transaction_public,
     request_transaction_token, verify_transaction_token,
 };
+pub use upload::*;
 pub use version::{
     create_push_task, create_version, get_available_version, get_compatibility_matrix,
-    get_outdated_devices, get_push_task, get_update_dashboard, get_version,
-    get_version_statistics, list_push_tasks, list_versions, update_version,
+    get_outdated_devices, get_push_task, get_update_dashboard, get_version, get_version_statistics,
+    list_push_tasks, list_versions, update_version,
 };

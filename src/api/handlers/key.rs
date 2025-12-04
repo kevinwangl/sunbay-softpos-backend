@@ -1,10 +1,11 @@
+use std::sync::Arc;
+
 use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Json},
     Extension,
 };
-use std::sync::Arc;
 
 use crate::{
     api::{middleware::extract_user_id, AppState},
@@ -27,10 +28,23 @@ pub async fn inject_key(
     let operator_id = claims.sub;
 
     // 调用服务层
-    let response = state
-        .key_management_service
-        .inject_key(req, &operator_id)
-        .await?;
+    let response = state.key_management_service.inject_key(req, &operator_id).await?;
+
+    Ok((StatusCode::OK, Json(response)))
+}
+
+/// 公开密钥注入处理器 (Demo专用)
+///
+/// POST /api/v1/public/keys/inject
+pub async fn inject_key_public(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<InjectKeyRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    // 使用默认的 demo 操作员 ID
+    let operator_id = "demo-operator".to_string();
+
+    // 调用服务层
+    let response = state.key_management_service.inject_key(req, &operator_id).await?;
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -43,10 +57,7 @@ pub async fn get_key_status(
     Path(device_id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
     // 调用服务层
-    let response = state
-        .key_management_service
-        .get_key_status(&device_id)
-        .await?;
+    let response = state.key_management_service.get_key_status(&device_id).await?;
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -64,10 +75,7 @@ pub async fn update_key(
     let operator_id = claims.sub;
 
     // 调用服务层
-    let response = state
-        .key_management_service
-        .update_key(req, &operator_id)
-        .await?;
+    let response = state.key_management_service.update_key(req, &operator_id).await?;
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -84,10 +92,7 @@ pub async fn encrypt_pin(
     let operator_id = claims.sub;
 
     // 调用服务层
-    let response = state
-        .key_management_service
-        .encrypt_pin(req, &operator_id)
-        .await?;
+    let response = state.key_management_service.encrypt_pin(req, &operator_id).await?;
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -100,10 +105,7 @@ pub async fn check_key_update_needed(
     Path(device_id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
     // 调用服务层
-    let needs_update = state
-        .key_management_service
-        .check_key_update_needed(&device_id)
-        .await?;
+    let needs_update = state.key_management_service.check_key_update_needed(&device_id).await?;
 
     #[derive(serde::Serialize)]
     struct CheckUpdateResponse {
@@ -126,10 +128,7 @@ pub async fn get_devices_needing_key_update(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
     // 调用服务层
-    let device_ids = state
-        .key_management_service
-        .get_devices_needing_key_update()
-        .await?;
+    let device_ids = state.key_management_service.get_devices_needing_key_update().await?;
 
     #[derive(serde::Serialize)]
     struct DevicesNeedingUpdateResponse {
