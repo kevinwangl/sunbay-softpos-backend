@@ -8,6 +8,8 @@ database:
 
 redis:
   url: "redis://localhost:6379"
+  # username: "default"  # 可选，Redis 6.0+，建议使用环境变量 APP_REDIS__USERNAME
+  # password: "your-password"  # 可选，建议使用环境变量 APP_REDIS__PASSWORD
 
 jwt:
   # IMPORTANT: Change this in production!

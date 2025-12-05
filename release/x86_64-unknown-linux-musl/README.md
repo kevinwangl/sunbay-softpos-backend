@@ -2,7 +2,7 @@
 
 ## Target Platform
 - Architecture: x86_64-unknown-linux-musl
-- Build Date: 2025年12月 2日 星期二 14时47分46秒 CST
+- Build Date: 2025年12月 5日 星期五 19时10分02秒 CST
 
 ## Installation
 
