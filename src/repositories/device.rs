@@ -82,6 +82,31 @@ impl DeviceRepository {
         Ok(result.count > 0)
     }
 
+    /// 根据IMEI查找设备
+    pub async fn find_by_imei(&self, imei: &str) -> Result<Option<Device>, AppError> {
+        let device = sqlx::query_as!(
+            Device,
+            r#"
+            SELECT 
+                id, imei, model, os_version, tee_type, device_mode, public_key,
+                status, merchant_id, merchant_name, 
+                security_score as "security_score: i32",
+                current_ksn, ipek_injected_at, 
+                key_remaining_count as "key_remaining_count: i32", 
+                key_total_count as "key_total_count: i32",
+                registered_at, approved_at, approved_by, last_active_at, updated_at,
+                nfc_present
+            FROM devices
+            WHERE imei = ?
+            "#,
+            imei
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(device)
+    }
+
     /// 列出设备（支持筛选、搜索、排序、分页）
     pub async fn list(
         &self,

@@ -43,7 +43,16 @@ impl DeviceService {
 
         // 检查IMEI是否已存在
         if self.device_repo.exists_by_imei(&request.imei).await? {
-            return Err(AppError::BadRequest("IMEI already exists".to_string()));
+            // IMEI已存在，返回已有设备信息而不是报错
+            tracing::info!("Device with IMEI {} already exists, returning existing device", request.imei);
+            let existing_device = self.device_repo.find_by_imei(&request.imei).await?
+                .ok_or_else(|| AppError::NotFound("Device not found".to_string()))?;
+            return Ok(RegisterDeviceResponse {
+                device_id: existing_device.id,
+                ksn: existing_device.current_ksn,
+                status: DeviceStatus::from_str(&existing_device.status).unwrap_or(DeviceStatus::Pending),
+                message: "Device already registered.".to_string(),
+            });
         }
 
         // 生成初始KSN
